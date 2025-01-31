@@ -1,10 +1,10 @@
 import type { TeactNode } from '../../../lib/teact/teact';
 import React from '../../../lib/teact/teact';
-
 import type { TextPart } from '../../../types';
 
 import {
-  BASE_URL, IS_PACKAGED_ELECTRON, RE_LINK_TEMPLATE, RE_MENTION_TEMPLATE,
+  BASE_URL,
+  IS_PACKAGED_ELECTRON,
 } from '../../../config';
 import EMOJI_REGEX from '../../../lib/twemojiRegex';
 import buildClassName from '../../../util/buildClassName';
@@ -22,16 +22,273 @@ import MentionLink from '../../middle/message/MentionLink';
 import SafeLink from '../SafeLink';
 
 export type TextFilter = (
-  'escape_html' | 'hq_emoji' | 'emoji' | 'emoji_html' | 'br' | 'br_html' | 'highlight' | 'links' |
-  'simple_markdown' | 'simple_markdown_html' | 'quote' | 'tg_links'
-  );
+  'escape_html' | 'hq_emoji' | 'emoji' | 'emoji_html' | 'br' | 'br_html' | 
+  'highlight' | 'links' | 'simple_markdown' | 'simple_markdown_html' | 
+  'quote' | 'tg_links'
+);
 
-const SIMPLE_MARKDOWN_REGEX = /(\*\*|__).+?\1/g;
+interface TextToken {
+  type: 'text' | 'bold' | 'italic' | 'link' | 'mention';
+  content: string;
+  metadata?: {
+    url?: string;
+    isHtml?: boolean;
+  };
+}
+
+class TextParser {
+  private text: string;
+  private position: number;
+
+  constructor(text: string) {
+    this.text = text;
+    this.position = 0;
+  }
+
+  parseText(): TextToken[] {
+    const tokens: TextToken[] = [];
+    let plainText = '';
+
+    while (this.position < this.text.length) {
+      const char = this.text[this.position];
+      const nextChar = this.text[this.position + 1];
+
+      // Parse markdown
+      if (char === '*' && nextChar === '*') {
+        if (plainText) {
+          tokens.push({ type: 'text', content: plainText });
+          plainText = '';
+        }
+        const boldResult = this.parseBold();
+        if (boldResult) {
+          tokens.push(boldResult);
+          continue;
+        }
+      }
+
+      if (char === '_' && nextChar === '_') {
+        if (plainText) {
+          tokens.push({ type: 'text', content: plainText });
+          plainText = '';
+        }
+        const italicResult = this.parseItalic();
+        if (italicResult) {
+          tokens.push(italicResult);
+          continue;
+        }
+      }
+
+      // Parse mentions
+      if (char === '@') {
+        if (plainText) {
+          tokens.push({ type: 'text', content: plainText });
+          plainText = '';
+        }
+        const mentionResult = this.parseMention();
+        if (mentionResult) {
+          tokens.push(mentionResult);
+          continue;
+        }
+      }
+
+      // Parse links
+      if ((char === 'h' && this.checkNextChars('https://')) || 
+          (char === 't' && this.checkNextChars('tg://'))) {
+        if (plainText) {
+          tokens.push({ type: 'text', content: plainText });
+          plainText = '';
+        }
+        const linkResult = this.parseLink();
+        if (linkResult) {
+          tokens.push(linkResult);
+          continue;
+        }
+      }
+
+      plainText += char;
+      this.position++;
+    }
+
+    if (plainText) {
+      tokens.push({ type: 'text', content: plainText });
+    }
+
+    return tokens;
+  }
+
+  private checkNextChars(str: string): boolean {
+    return this.text.slice(this.position, this.position + str.length) === str;
+  }
+
+  private parseMention(): TextToken | null {
+    const startPos = this.position;
+    let content = '@';
+    this.position++; // Skip @
+
+    while (this.position < this.text.length) {
+      const char = this.text[this.position];
+      if (!/[a-zA-Z0-9_]/.test(char)) {
+        break;
+      }
+      content += char;
+      this.position++;
+    }
+
+    if (content.length > 1) {
+      return { type: 'mention', content };
+    }
+
+    this.position = startPos;
+    return null;
+  }
+
+  private parseLink(): TextToken | null {
+    const startPos = this.position;
+    let content = '';
+
+    while (this.position < this.text.length) {
+      const char = this.text[this.position];
+      if (char === ' ' || char === '\n') {
+        break;
+      }
+      content += char;
+      this.position++;
+    }
+
+    if (content.startsWith('https://') || content.startsWith('tg://')) {
+      return {
+        type: 'link',
+        content,
+        metadata: { url: content }
+      };
+    }
+
+    this.position = startPos;
+    return null;
+  }
+
+  parseMarkdown(): TextToken[] {
+    const tokens: TextToken[] = [];
+    let plainText = '';
+
+    while (this.position < this.text.length) {
+      const char = this.text[this.position];
+      const nextChar = this.text[this.position + 1];
+
+      if (char === '*' && nextChar === '*') {
+        if (plainText) {
+          tokens.push({ type: 'text', content: plainText });
+          plainText = '';
+        }
+        const boldResult = this.parseBold();
+        if (boldResult) {
+          tokens.push(boldResult);
+          continue;
+        }
+      }
+
+      if (char === '_' && nextChar === '_') {
+        if (plainText) {
+          tokens.push({ type: 'text', content: plainText });
+          plainText = '';
+        }
+        const italicResult = this.parseItalic();
+        if (italicResult) {
+          tokens.push(italicResult);
+          continue;
+        }
+      }
+
+      plainText += char;
+      this.position++;
+    }
+
+    if (plainText) {
+      tokens.push({ type: 'text', content: plainText });
+    }
+
+    return tokens;
+  }
+
+  private parseBold(): TextToken | null {
+    const startPos = this.position;
+    this.position += 2; // Skip **
+    let content = '';
+
+    while (this.position < this.text.length) {
+      if (this.text[this.position] === '*' && this.text[this.position + 1] === '*') {
+        this.position += 2;
+        return { type: 'bold', content };
+      }
+      content += this.text[this.position];
+      this.position++;
+    }
+
+    this.position = startPos;
+    return null;
+  }
+
+  private parseItalic(): TextToken | null {
+    const startPos = this.position;
+    this.position += 2; // Skip __
+    let content = '';
+
+    while (this.position < this.text.length) {
+      if (this.text[this.position] === '_' && this.text[this.position + 1] === '_') {
+        this.position += 2;
+        return { type: 'italic', content };
+      }
+      content += this.text[this.position];
+      this.position++;
+    }
+
+    this.position = startPos;
+    return null;
+  }
+}
+
+function renderTextToken(token: TextToken, params: any, filter: TextFilter): TeactNode {
+  switch (token.type) {
+    case 'text':
+      return token.content;
+
+    case 'bold':
+      return filter === 'simple_markdown_html' 
+        ? `<b>${token.content}</b>`
+        : <b>{token.content}</b>;
+
+    case 'italic':
+      return filter === 'simple_markdown_html'
+        ? `<i>${token.content}</i>`
+        : <i>{token.content}</i>;
+
+    case 'link':
+      if (filter === 'tg_links' && !isDeepLink(token.metadata?.url || '')) {
+        return token.content;
+      }
+      return <SafeLink text={token.content} url={token.metadata?.url || token.content} />;
+
+    case 'mention':
+      return (
+        <MentionLink username={token.content}>
+          {token.content}
+        </MentionLink>
+      );
+
+    default:
+      return token.content;
+  }
+}
+
 
 export default function renderText(
   part: TextPart,
   filters: Array<TextFilter> = ['emoji'],
-  params?: { highlight?: string; quote?: string; markdownPostProcessor?: (part: string) => TeactNode },
+  params?: {
+    highlight?: string;
+    quote?: string;
+    markdownPostProcessor?: (part: string) => TeactNode;
+  },
 ): TeactNode[] {
   if (typeof part !== 'string') {
     return [part];
@@ -39,6 +296,7 @@ export default function renderText(
 
   return compact(filters.reduce((text, filter) => {
     switch (filter) {
+      
       case 'escape_html':
         return escapeHtml(text);
 
@@ -66,36 +324,62 @@ export default function renderText(
       case 'quote':
         return addHighlight(text, params!.quote, true);
 
-      case 'links':
-        return addLinks(text);
-
-      case 'tg_links':
-        return addLinks(text, true);
-
+        case 'links':
+          case 'tg_links':
+            return text.reduce((result: TextPart[], textPart) => {
+              if (typeof textPart !== 'string') {
+                result.push(textPart);
+                return result;
+              }
+          
+              const parser = new TextParser(textPart);
+              const tokens = parser.parseText();
+          
+              tokens.forEach((token) => {
+                result.push(renderTextToken(token, params, filter));
+              });
+          
+              return result;
+            }, []);  
       case 'simple_markdown':
-        return replaceSimpleMarkdown(text, 'jsx', params?.markdownPostProcessor);
-
       case 'simple_markdown_html':
-        return replaceSimpleMarkdown(text, 'html');
-    }
+        return text.reduce((result: TextPart[], textPart) => {
+          if (typeof textPart !== 'string') {
+            result.push(textPart);
+            return result;
+          }
 
-    return text;
+          const parser = new TextParser(textPart);
+          const tokens = parser.parseMarkdown();
+       
+          tokens.forEach((token) => {
+            switch (token.type) {
+              case 'bold':
+                result.push(
+                  filter === 'simple_markdown_html'
+                    ? `<b>${token.content}</b>`
+                    : <b>{token.content}</b>
+                );
+                break;
+              case 'italic':
+                result.push(
+                  filter === 'simple_markdown_html'
+                    ? `<i>${token.content}</i>`
+                    : <i>{token.content}</i>
+                );
+                break;
+              default:
+                result.push(token.content);
+            }
+          });
+
+          return result;
+        }, []);
+
+      default:
+        return text;
+    }
   }, [part] as TextPart[]));
-}
-
-function escapeHtml(textParts: TextPart[]): TextPart[] {
-  const divEl = document.createElement('div');
-  return textParts.reduce((result: TextPart[], part) => {
-    if (typeof part !== 'string') {
-      result.push(part);
-      return result;
-    }
-
-    divEl.innerText = part;
-    result.push(divEl.innerHTML);
-
-    return result;
-  }, []);
 }
 
 function replaceEmojis(textParts: TextPart[], size: 'big' | 'small', type: 'jsx' | 'html'): TextPart[] {
@@ -103,7 +387,7 @@ function replaceEmojis(textParts: TextPart[], size: 'big' | 'small', type: 'jsx'
     return textParts;
   }
 
-  return textParts.reduce((result: TextPart[], part: TextPart) => {
+  return textParts.reduce((result: TextPart[], part) => {
     if (typeof part !== 'string') {
       result.push(part);
       return result;
@@ -159,7 +443,22 @@ function replaceEmojis(textParts: TextPart[], size: 'big' | 'small', type: 'jsx'
 
       return emojiResult;
     }, result);
-  }, [] as TextPart[]);
+  }, []);
+}
+
+function escapeHtml(textParts: TextPart[]): TextPart[] {
+  const divEl = document.createElement('div');
+  return textParts.reduce((result: TextPart[], part) => {
+    if (typeof part !== 'string') {
+      result.push(part);
+      return result;
+    }
+
+    divEl.innerText = part;
+    result.push(divEl.innerHTML);
+
+    return result;
+  }, []);
 }
 
 function addLineBreaks(textParts: TextPart[], type: 'jsx' | 'html'): TextPart[] {
@@ -172,7 +471,6 @@ function addLineBreaks(textParts: TextPart[], type: 'jsx' | 'html'): TextPart[] 
     const splittenParts = part
       .split(/\r\n|\r|\n/g)
       .reduce((parts: TextPart[], line: string, i, source) => {
-        // This adds non-breaking space if line was indented with spaces, to preserve the indentation
         const trimmedLine = line.trimLeft();
         const indentLength = line.length - trimmedLine.length;
         parts.push(String.fromCharCode(160).repeat(indentLength) + trimmedLine);
@@ -190,127 +488,38 @@ function addLineBreaks(textParts: TextPart[], type: 'jsx' | 'html'): TextPart[] 
   }, []);
 }
 
-function addHighlight(textParts: TextPart[], highlight: string | undefined, isQuote?: true): TextPart[] {
-  return textParts.reduce<TextPart[]>((result, part) => {
+function addHighlight(textParts: TextPart[], highlight?: string, isQuote?: boolean): TextPart[] {
+  return textParts.reduce((result: TextPart[], part) => {
     if (typeof part !== 'string' || !highlight) {
       result.push(part);
       return result;
     }
 
-    const lowerCaseText = part.toLowerCase();
-    const queryPosition = lowerCaseText.indexOf(highlight.toLowerCase());
-    if (queryPosition < 0) {
+    const partLower = part.toLowerCase();
+    const highlightLower = highlight.toLowerCase();
+    const index = partLower.indexOf(highlightLower);
+
+    if (index === -1) {
       result.push(part);
       return result;
     }
 
-    const newParts: TextPart[] = [];
-    newParts.push(part.substring(0, queryPosition));
-    newParts.push(
+    result.push(part.substring(0, index));
+    result.push(
       <span className={buildClassName('matching-text-highlight', isQuote && 'is-quote')}>
-        {part.substring(queryPosition, queryPosition + highlight.length)}
+        {part.substring(index, index + highlight.length)}
       </span>,
     );
-    newParts.push(part.substring(queryPosition + highlight.length));
-    return [...result, ...newParts];
-  }, []);
-}
+    result.push(part.substring(index + highlight.length));
 
-const RE_LINK = new RegExp(`${RE_LINK_TEMPLATE}|${RE_MENTION_TEMPLATE}`, 'ig');
-
-function addLinks(textParts: TextPart[], allowOnlyTgLinks?: boolean): TextPart[] {
-  return textParts.reduce<TextPart[]>((result, part) => {
-    if (typeof part !== 'string') {
-      result.push(part);
-      return result;
-    }
-
-    const links = part.match(RE_LINK);
-    if (!links || !links.length) {
-      result.push(part);
-      return result;
-    }
-
-    const content: TextPart[] = [];
-
-    let nextLink = links.shift();
-    let lastIndex = 0;
-    while (nextLink) {
-      const index = part.indexOf(nextLink, lastIndex);
-      content.push(part.substring(lastIndex, index));
-      if (nextLink.startsWith('@')) {
-        content.push(
-          <MentionLink username={nextLink}>
-            {nextLink}
-          </MentionLink>,
-        );
-      } else {
-        if (nextLink.endsWith('?')) {
-          nextLink = nextLink.slice(0, nextLink.length - 1);
-        }
-
-        if (!allowOnlyTgLinks || isDeepLink(nextLink)) {
-          content.push(
-            <SafeLink text={nextLink} url={nextLink} />,
-          );
-        } else {
-          content.push(nextLink);
-        }
-      }
-      lastIndex = index + nextLink.length;
-      nextLink = links.shift();
-    }
-    content.push(part.substring(lastIndex));
-
-    return [...result, ...content];
-  }, []);
-}
-
-function replaceSimpleMarkdown(
-  textParts: TextPart[], type: 'jsx' | 'html', postProcessor?: (part: string) => TeactNode,
-): TextPart[] {
-  // Currently supported only for JSX. If needed, add typings to support HTML as well.
-  const postProcess = postProcessor || ((part: string) => part);
-
-  return textParts.reduce<TextPart[]>((result, part) => {
-    if (typeof part !== 'string') {
-      result.push(part);
-      return result;
-    }
-
-    const parts = part.split(SIMPLE_MARKDOWN_REGEX);
-    const entities: string[] = part.match(SIMPLE_MARKDOWN_REGEX) || [];
-    result.push(postProcess(parts[0]));
-
-    return entities.reduce((entityResult: TextPart[], entity, i) => {
-      if (type === 'jsx') {
-        entityResult.push(
-          entity.startsWith('**')
-            ? <b>{postProcess(entity.replace(/\*\*/g, ''))}</b>
-            : <i>{postProcess(entity.replace(/__/g, ''))}</i>,
-        );
-      } else {
-        entityResult.push(
-          entity.startsWith('**')
-            ? `<b>${entity.replace(/\*\*/g, '')}</b>`
-            : `<i>${entity.replace(/__/g, '')}</i>`,
-        );
-      }
-
-      const index = i * 2 + 2;
-      if (parts[index]) {
-        entityResult.push(postProcess(parts[index]));
-      }
-
-      return entityResult;
-    }, result);
+    return result;
   }, []);
 }
 
 export function areLinesWrapping(text: string, element: HTMLElement) {
-  const lines = (text.trim().match(/\n/g) || '').length + 1;
+  const lines = text.split('\n').length;
   const { lineHeight } = getComputedStyle(element);
-  const lineHeightParsed = parseFloat(lineHeight.split('px')[0]);
-
-  return element.clientHeight >= (lines + 1) * lineHeightParsed;
+  const lineHeightPx = parseFloat(lineHeight);
+  
+  return element.clientHeight > lines * lineHeightPx;
 }

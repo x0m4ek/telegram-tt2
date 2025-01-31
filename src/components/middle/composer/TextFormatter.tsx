@@ -40,6 +40,7 @@ interface ISelectedTextFormats {
   strikethrough?: boolean;
   monospace?: boolean;
   spoiler?: boolean;
+  quote?: boolean;
 }
 
 const TEXT_FORMAT_BY_TAG_NAME: Record<string, keyof ISelectedTextFormats> = {
@@ -51,6 +52,7 @@ const TEXT_FORMAT_BY_TAG_NAME: Record<string, keyof ISelectedTextFormats> = {
   DEL: 'strikethrough',
   CODE: 'monospace',
   SPAN: 'spoiler',
+  
 };
 const fragmentEl = document.createElement('div');
 
@@ -318,6 +320,32 @@ const TextFormatter: FC<OwnProps> = ({
     onClose();
   });
 
+  const handleQuoteText = useLastCallback(() => {
+    if (selectedTextFormats.monospace) {
+      const element = getSelectedElement();
+      if (
+        !selectedRange
+        || !element
+        || element.tagName !== 'BLOCKQUOTE'
+        || !element.textContent
+      ) {
+        return;
+      }
+
+      element.replaceWith(element.textContent);
+      setSelectedTextFormats((selectedFormats) => ({
+        ...selectedFormats,
+        quote: false,
+      }));
+
+      return;
+    }
+
+    const text = getSelectedText(true);
+    document.execCommand('insertHTML', false, `<blockquote class="${ApiMessageEntityTypes.Blockquote}" dir="auto">${text}</blockquote>`);
+    onClose();
+  });
+
   const handleLinkUrlConfirm = useLastCallback(() => {
     const formattedLinkUrl = (ensureProtocol(linkUrl) || '').split('%').map(encodeURI).join('%');
 
@@ -462,6 +490,14 @@ const TextFormatter: FC<OwnProps> = ({
           ariaLabel="Monospace text"
           className={getFormatButtonClassName('monospace')}
           onClick={handleMonospaceText}
+        >
+          <Icon name="monospace" />
+        </Button>
+        <Button
+          color="translucent"
+          ariaLabel="Quote text"
+          className={getFormatButtonClassName('quote')}
+          onClick={handleQuoteText}
         >
           <Icon name="monospace" />
         </Button>
