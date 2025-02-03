@@ -42,7 +42,11 @@ interface ISelectedTextFormats {
   spoiler?: boolean;
   quote?: boolean;
 }
-
+interface IFormatAnalysis {
+  formats: ISelectedTextFormats;
+  hasNestedFormats: boolean;
+  hasConflictingFormats: boolean;
+}
 const TEXT_FORMAT_BY_TAG_NAME: Record<string, keyof ISelectedTextFormats> = {
   B: 'bold',
   STRONG: 'bold',
@@ -52,10 +56,85 @@ const TEXT_FORMAT_BY_TAG_NAME: Record<string, keyof ISelectedTextFormats> = {
   DEL: 'strikethrough',
   CODE: 'monospace',
   SPAN: 'spoiler',
+  BLOCKQUOTE: 'quote'
   
 };
+const CONFLICTING_FORMATS = ['monospace', 'strikethrough'];
 const fragmentEl = document.createElement('div');
 
+function analyzeFormatting(element: HTMLElement | null): IFormatAnalysis {
+  const formats: ISelectedTextFormats = {};
+  let hasNestedFormats = false;
+  let hasConflictingFormats = false;
+
+  // Get all format elements within the selection
+  const selection = window.getSelection();
+  if (selection && selection.rangeCount > 0) {
+    const range = selection.getRangeAt(0);
+    
+    // Get the common ancestor container
+    let container = range.commonAncestorContainer;
+    if (container.nodeType === Node.TEXT_NODE) {
+      container = container.parentElement!;
+    }
+
+    // First check the direct parent elements for formats
+    let currentElement: HTMLElement | null = container as HTMLElement;
+    while (currentElement && currentElement.id !== EDITABLE_INPUT_ID) {
+      const tagName = currentElement.tagName.toUpperCase();
+      console.log("TAGNAME",tagName);
+      const format = TEXT_FORMAT_BY_TAG_NAME[tagName];
+      
+      if (format) {
+        formats[format] = true;
+      }
+      
+      // Check for spoiler class
+      if (tagName === 'SPAN' && currentElement.classList.contains('spoiler')) {
+        formats.spoiler = true;
+      }
+
+      currentElement = currentElement.parentElement;
+    }
+
+    // Then check all formatted elements within the selection
+    const fragment = range.cloneContents();
+    const formatElements = Array.from(fragment.querySelectorAll('b,strong,i,em,u,del,code,span.spoiler,blockquote'));
+    
+    // Add formats from elements within selection
+    formatElements.forEach((el) => {
+      const tagName = el.tagName.toUpperCase();
+      const format = TEXT_FORMAT_BY_TAG_NAME[tagName];
+      
+      if (format) {
+        formats[format] = true;
+      }
+      
+      if (tagName === 'SPAN' && el.classList.contains('spoiler')) {
+        formats.spoiler = true;
+      }
+    });
+
+    // Check for nested formats
+    hasNestedFormats = formatElements.length > 1 || Object.keys(formats).length > 1;
+
+    // Check for conflicting formats
+    hasConflictingFormats = CONFLICTING_FORMATS.some((format) => 
+      formats[format as keyof ISelectedTextFormats] && Object.keys(formats).length > 1
+    );
+  }
+
+  console.log("Selection range:", selection?.getRangeAt(0));
+  console.log("Formats found:", formats);
+  console.log("Has nested formats:", hasNestedFormats);
+  console.log("Has conflicting formats:", hasConflictingFormats);
+
+  return {
+    formats,
+    hasNestedFormats,
+    hasConflictingFormats,
+  };
+}
 const TextFormatter: FC<OwnProps> = ({
   isOpen,
   anchorPosition,
@@ -73,7 +152,11 @@ const TextFormatter: FC<OwnProps> = ({
   const [isEditingLink, setIsEditingLink] = useState(false);
   const [inputClassName, setInputClassName] = useState<string | undefined>();
   const [selectedTextFormats, setSelectedTextFormats] = useState<ISelectedTextFormats>({});
-
+  const [formatAnalysis, setFormatAnalysis] = useState<IFormatAnalysis>({
+    formats: {},
+    hasNestedFormats: false,
+    hasConflictingFormats: false,
+  });
   useEffect(() => (isOpen ? captureEscKeyListener(onClose) : undefined), [isOpen, onClose]);
   useVirtualBackdrop(
     isOpen,
@@ -104,20 +187,208 @@ const TextFormatter: FC<OwnProps> = ({
       return;
     }
 
-    const selectedFormats: ISelectedTextFormats = {};
-    let { parentElement } = selectedRange.commonAncestorContainer;
-    while (parentElement && parentElement.id !== EDITABLE_INPUT_ID) {
-      const textFormat = TEXT_FORMAT_BY_TAG_NAME[parentElement.tagName];
-      if (textFormat) {
-        selectedFormats[textFormat] = true;
-      }
+    const parentElement = selectedRange.commonAncestorContainer.nodeType === Node.TEXT_NODE
+      ? selectedRange.commonAncestorContainer.parentElement
+      : selectedRange.commonAncestorContainer as HTMLElement;
 
-      parentElement = parentElement.parentElement;
+    const analysis = analyzeFormatting(parentElement);
+    setFormatAnalysis(analysis);
+    setSelectedTextFormats(analysis.formats);
+  }, [isOpen, selectedRange]);
+
+  const setAndPreserveSelection = useLastCallback((range: Range) => {
+    setSelectedRange(range);
+    const selection = window.getSelection();
+    if (selection) {
+      selection.removeAllRanges();
+      selection.addRange(range);
     }
+  });
+  
+  const applyFormatPreservingOthers = useLastCallback((
+    command: string, 
+    tag?: string,
+  ) => {
+    if (!selectedRange) return;
+  
+    const selection = window.getSelection();
+    if (!selection || !selection.rangeCount) return;
+  
+    const range = selection.getRangeAt(0);
+    if (range.collapsed) return;
+  
+    const analysis = analyzeFormatting(range.commonAncestorContainer as HTMLElement);
+    const isFormatActive = analysis.formats[command as keyof ISelectedTextFormats];
 
-    setSelectedTextFormats(selectedFormats);
-  }, [isOpen, selectedRange, openLinkControl]);
+   
+    const createFormattedHtml = (text: string): string => {
+      switch (command) {
+        case 'monospace':
+          return `<code class="text-entity-code" data-entity-type="${ApiMessageEntityTypes.Code}" dir="auto">${text}</code>`;
+        case 'strikethrough':
+          return `<del data-entity-type="${ApiMessageEntityTypes.Strike}">${text}</del>`;
+        case 'spoiler':
+          return `<span class="spoiler" data-entity-type="${ApiMessageEntityTypes.Spoiler}">${text}</span>`;
+        case 'quote':
+          return `<blockquote data-entity-type="${ApiMessageEntityTypes.Blockquote}">${text}</blockquote>`;
+        default:
+          return text;
+      }
+    };
+  
+    if (['monospace', 'strikethrough', 'spoiler', 'quote'].includes(command)) {
+      if (isFormatActive && tag) {
+        let element = range.commonAncestorContainer as HTMLElement;
+        if (element.nodeType === Node.TEXT_NODE) {
+          element = element.parentElement!;
+        }
+        
+        while (element && element.tagName !== tag.toUpperCase()) {
+          element = element.parentElement!;
+        }
+  
+        if (!element || !element.textContent) {
+          return;
+        }
 
+   
+        const elementRange = document.createRange();
+        elementRange.selectNodeContents(element);
+        
+        const isPartialSelection = (
+          range.startContainer !== elementRange.startContainer ||
+          range.endContainer !== elementRange.endContainer ||
+          range.startOffset !== elementRange.startOffset ||
+          range.endOffset !== elementRange.endOffset
+        );
+
+        if (isPartialSelection) {
+       
+          const parentElement = element.parentElement;
+          
+          const beforeText = element.textContent.slice(0, range.startOffset);
+          const selectedText = range.toString();
+          const afterText = element.textContent.slice(range.endOffset);
+
+    
+          let newHtml = '';
+          if (beforeText) {
+            newHtml += createFormattedHtml(beforeText);
+          }
+          newHtml += selectedText;
+          if (afterText) {
+            newHtml += createFormattedHtml(afterText);
+          }
+
+        
+          element.insertAdjacentHTML('beforebegin', newHtml);
+          element.remove();
+
+          // REstores selection
+          if (parentElement) {
+            const newRange = document.createRange();
+            const textNodes = Array.from(parentElement.childNodes);
+            const selectedNode = textNodes.find(node => 
+              node.nodeType === Node.TEXT_NODE && node.textContent === selectedText
+            );
+
+            if (selectedNode) {
+              newRange.selectNodeContents(selectedNode);
+              selection.removeAllRanges();
+              selection.addRange(newRange);
+            }
+          }
+        } else {
+
+          // If selected whole element then delete all formating text
+          const textContent = element.textContent;
+          const textNode = document.createTextNode(textContent);
+          element.replaceWith(textNode);
+
+          const newRange = document.createRange();
+          newRange.setStart(textNode, 0);
+          newRange.setEnd(textNode, textContent.length);
+          selection.removeAllRanges();
+          selection.addRange(newRange);
+        }
+  
+        setFormatAnalysis((prevAnalysis) => ({
+          ...prevAnalysis,
+          formats: {
+            ...prevAnalysis.formats,
+            [command]: false
+          }
+        }));
+      } else {
+        
+        const text = range.toString();
+        const htmlToInsert = createFormattedHtml(text);
+  
+        
+        document.execCommand('insertHTML', false, htmlToInsert);
+
+      
+        const newSelection = window.getSelection();
+        if (newSelection && newSelection.rangeCount > 0) {
+          const newRange = newSelection.getRangeAt(0);
+          let insertedElement = newRange.commonAncestorContainer as HTMLElement;
+          if (insertedElement.nodeType === Node.TEXT_NODE) {
+            insertedElement = insertedElement.parentElement!;
+          }
+
+          const elementRange = document.createRange();
+          elementRange.selectNodeContents(insertedElement);
+          selection.removeAllRanges();
+          selection.addRange(elementRange);
+        }
+      }
+      
+      const newSelection = window.getSelection();
+      if (newSelection && newSelection.rangeCount > 0) {
+        const newRange = newSelection.getRangeAt(0);
+        const newAnalysis = analyzeFormatting(newRange.commonAncestorContainer as HTMLElement);
+        setFormatAnalysis(newAnalysis);
+      }
+    } 
+    // Simple formats logic
+    else {
+      
+      if (isFormatActive && tag) {
+        document.execCommand('removeFormat');
+        
+        Object.entries(analysis.formats).forEach(([format, isActive]) => {
+          if (isActive && format !== command) {
+            switch(format) {
+              case 'bold':
+                document.execCommand('bold');
+                break;
+              case 'italic':
+                document.execCommand('italic');
+                break;
+              case 'underline':
+                document.execCommand('underline');
+                break;
+            }
+          }
+        });
+      } else {
+        switch(command) {
+          case 'bold':
+            document.execCommand('bold');
+            break;
+          case 'italic':
+            document.execCommand('italic');
+            break;
+          case 'underline':
+            document.execCommand('underline');
+            break;
+        }
+      }
+  
+      const newAnalysis = analyzeFormatting(range.commonAncestorContainer as HTMLElement);
+      setFormatAnalysis(newAnalysis);
+    }
+  });
   const restoreSelection = useLastCallback(() => {
     if (!selectedRange) {
       return;
@@ -127,13 +398,6 @@ const TextFormatter: FC<OwnProps> = ({
     if (selection) {
       selection.removeAllRanges();
       selection.addRange(selectedRange);
-    }
-  });
-
-  const updateSelectedRange = useLastCallback(() => {
-    const selection = window.getSelection();
-    if (selection) {
-      setSelectedRange(selection.getRangeAt(0));
     }
   });
 
@@ -187,163 +451,53 @@ const TextFormatter: FC<OwnProps> = ({
   }
 
   function getFormatButtonClassName(key: keyof ISelectedTextFormats) {
-    if (selectedTextFormats[key]) {
+   
+    if (formatAnalysis.formats[key]) {
       return 'active';
     }
-
-    if (key === 'monospace' || key === 'strikethrough') {
-      if (Object.keys(selectedTextFormats).some(
-        (fKey) => fKey !== key && Boolean(selectedTextFormats[fKey as keyof ISelectedTextFormats]),
-      )) {
+  
+    
+    if (CONFLICTING_FORMATS.includes(key)) {
+      const hasConflictingFormat = CONFLICTING_FORMATS.some(
+        (format) => format !== key && formatAnalysis.formats[format as keyof ISelectedTextFormats]
+      );
+      if (hasConflictingFormat) {
         return 'disabled';
       }
-    } else if (selectedTextFormats.monospace || selectedTextFormats.strikethrough) {
-      return 'disabled';
     }
-
+  
     return undefined;
   }
 
   const handleSpoilerText = useLastCallback(() => {
-    if (selectedTextFormats.spoiler) {
-      const element = getSelectedElement();
-      if (
-        !selectedRange
-        || !element
-        || element.dataset.entityType !== ApiMessageEntityTypes.Spoiler
-        || !element.textContent
-      ) {
-        return;
-      }
+    applyFormatPreservingOthers('spoiler', 'span');
 
-      element.replaceWith(element.textContent);
-      setSelectedTextFormats((selectedFormats) => ({
-        ...selectedFormats,
-        spoiler: false,
-      }));
-
-      return;
-    }
-
-    const text = getSelectedText();
-    document.execCommand(
-      'insertHTML', false, `<span class="spoiler" data-entity-type="${ApiMessageEntityTypes.Spoiler}">${text}</span>`,
-    );
-    onClose();
   });
 
   const handleBoldText = useLastCallback(() => {
-    setSelectedTextFormats((selectedFormats) => {
-      // Somehow re-applying 'bold' command to already bold text doesn't work
-      document.execCommand(selectedFormats.bold ? 'removeFormat' : 'bold');
-      Object.keys(selectedFormats).forEach((key) => {
-        if ((key === 'italic' || key === 'underline') && Boolean(selectedFormats[key])) {
-          document.execCommand(key);
-        }
-      });
-
-      updateSelectedRange();
-      return {
-        ...selectedFormats,
-        bold: !selectedFormats.bold,
-      };
-    });
+    applyFormatPreservingOthers('bold', 'b');
   });
-
+  
   const handleItalicText = useLastCallback(() => {
-    document.execCommand('italic');
-    updateSelectedRange();
-    setSelectedTextFormats((selectedFormats) => ({
-      ...selectedFormats,
-      italic: !selectedFormats.italic,
-    }));
+    applyFormatPreservingOthers('italic', 'i');
+
   });
 
   const handleUnderlineText = useLastCallback(() => {
-    document.execCommand('underline');
-    updateSelectedRange();
-    setSelectedTextFormats((selectedFormats) => ({
-      ...selectedFormats,
-      underline: !selectedFormats.underline,
-    }));
+    applyFormatPreservingOthers('underline', 'u');
+
   });
 
   const handleStrikethroughText = useLastCallback(() => {
-    if (selectedTextFormats.strikethrough) {
-      const element = getSelectedElement();
-      if (
-        !selectedRange
-        || !element
-        || element.tagName !== 'DEL'
-        || !element.textContent
-      ) {
-        return;
-      }
-
-      element.replaceWith(element.textContent);
-      setSelectedTextFormats((selectedFormats) => ({
-        ...selectedFormats,
-        strikethrough: false,
-      }));
-
-      return;
-    }
-
-    const text = getSelectedText();
-    document.execCommand('insertHTML', false, `<del>${text}</del>`);
-    onClose();
+    applyFormatPreservingOthers('strikethrough', 'del');
   });
 
   const handleMonospaceText = useLastCallback(() => {
-    if (selectedTextFormats.monospace) {
-      const element = getSelectedElement();
-      if (
-        !selectedRange
-        || !element
-        || element.tagName !== 'CODE'
-        || !element.textContent
-      ) {
-        return;
-      }
-
-      element.replaceWith(element.textContent);
-      setSelectedTextFormats((selectedFormats) => ({
-        ...selectedFormats,
-        monospace: false,
-      }));
-
-      return;
-    }
-
-    const text = getSelectedText(true);
-    document.execCommand('insertHTML', false, `<code class="text-entity-code" dir="auto">${text}</code>`);
-    onClose();
+    applyFormatPreservingOthers('monospace', 'code');
   });
 
   const handleQuoteText = useLastCallback(() => {
-    if (selectedTextFormats.monospace) {
-      const element = getSelectedElement();
-      if (
-        !selectedRange
-        || !element
-        || element.tagName !== 'BLOCKQUOTE'
-        || !element.textContent
-      ) {
-        return;
-      }
-
-      element.replaceWith(element.textContent);
-      setSelectedTextFormats((selectedFormats) => ({
-        ...selectedFormats,
-        quote: false,
-      }));
-
-      return;
-    }
-
-    const text = getSelectedText(true);
-    document.execCommand('insertHTML', false, `<blockquote class="${ApiMessageEntityTypes.Blockquote}" dir="auto">${text}</blockquote>`);
-    onClose();
+    applyFormatPreservingOthers('quote', 'blockquote');
   });
 
   const handleLinkUrlConfirm = useLastCallback(() => {
@@ -499,7 +653,7 @@ const TextFormatter: FC<OwnProps> = ({
           className={getFormatButtonClassName('quote')}
           onClick={handleQuoteText}
         >
-          <Icon name="monospace" />
+          <Icon name="quote-text" />
         </Button>
         <div className="TextFormatter-divider" />
         <Button color="translucent" ariaLabel={lang('TextFormat.AddLinkTitle')} onClick={openLinkControl}>
