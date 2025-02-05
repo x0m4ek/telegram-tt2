@@ -37,6 +37,7 @@ import Icon from '../../common/icons/Icon';
 import Button from '../../ui/Button';
 import TextTimer from '../../ui/TextTimer';
 import TextFormatter from './TextFormatter.async';
+import {  restoreCaretPosition, saveCaretPosition, UndoManager } from './helpers/undoManager';
 
 const CONTEXT_MENU_CLOSE_DELAY_MS = 100;
 // Focus slows down animation, also it breaks transition layout in Chrome
@@ -70,11 +71,13 @@ type OwnProps = {
   onUpdate: (html: string) => void;
   onSuppressedFocus?: () => void;
   onSend: () => void;
+  onUpdateHistory?: (html: string) => void;
   onScroll?: (event: React.UIEvent<HTMLElement>) => void;
   captionLimit?: number;
   onFocus?: NoneToVoidFunction;
   onBlur?: NoneToVoidFunction;
   isNeedPremium?: boolean;
+  
 };
 
 type StateProps = {
@@ -140,6 +143,7 @@ const MessageInput: FC<OwnProps & StateProps> = ({
   onScroll,
   onFocus,
   onBlur,
+  onUpdateHistory,
   isNeedPremium,
 }) => {
   const {
@@ -154,6 +158,12 @@ const MessageInput: FC<OwnProps & StateProps> = ({
   if (ref) {
     inputRef = ref;
   }
+
+  const undoManagerRef = useRef(new UndoManager());
+  const isComposingRef = useRef(false);
+  const lastContentRef = useRef('');
+
+  const isFirstChangeRef = useRef(true);
 
   // eslint-disable-next-line no-null/no-null
   const selectionTimeoutRef = useRef<number>(null);
@@ -274,6 +284,29 @@ const MessageInput: FC<OwnProps & StateProps> = ({
     focusEditableElement(inputRef.current!);
   });
 
+ 
+  
+
+  const updateHistory = useLastCallback((newHtml: string) => {
+    if (isComposingRef.current) {
+      return;
+    }
+
+
+    if (isFirstChangeRef.current) {
+      undoManagerRef.current.push('', { offset: 0, nodeIndex: 0, nodeOffset: 0 })
+      isFirstChangeRef.current = false;
+    }
+
+    if (newHtml !== lastContentRef.current) {
+      const caretPosition = saveCaretPosition(inputRef.current!);
+      undoManagerRef.current.push(newHtml, caretPosition);
+      lastContentRef.current = newHtml;
+      onUpdateHistory?.(newHtml);
+    }
+  });
+
+
   const handleCloseTextFormatter = useLastCallback(() => {
     closeTextFormatter();
     clearSelection();
@@ -281,9 +314,9 @@ const MessageInput: FC<OwnProps & StateProps> = ({
 
   function checkSelection() {
     // Disable the formatter on iOS devices for now.
-    if (IS_IOS) {
-      return false;
-    }
+    // if (IS_IOS) {
+    //   return false;
+    // }
 
     const selection = window.getSelection();
     if (!selection || !selection.rangeCount || isContextMenuOpenRef.current) {
@@ -382,7 +415,36 @@ const MessageInput: FC<OwnProps & StateProps> = ({
   function handleKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
     // https://levelup.gitconnected.com/javascript-events-handlers-keyboard-and-load-events-1b3e46a6b0c3#1960
     const { isComposing } = e;
+    isComposingRef.current = isComposing;
 
+    if (!isComposing && (e.ctrlKey || e.metaKey)) {
+      if (e.key === 'z') {
+        e.preventDefault();
+        
+        if (e.shiftKey) {
+          // Redo
+          const redoState = undoManagerRef.current.redo();
+          if (redoState) {
+            const { html, caretPosition } = redoState;
+            inputRef.current!.innerHTML = html;
+            onUpdate(html);
+            // Async restore pos
+            restoreCaretPosition(inputRef.current!, caretPosition);
+          }
+        } else {
+          // Undo
+          const undoState = undoManagerRef.current.undo();
+          if (undoState) {
+            const { html, caretPosition } = undoState;
+            inputRef.current!.innerHTML = html;
+            onUpdate(html);
+           
+            restoreCaretPosition(inputRef.current!, caretPosition);
+          }
+        }
+        return;
+      }
+    }
     const html = getHtml();
     if (!isComposing && !html && (e.metaKey || e.ctrlKey)) {
       const targetIndexDelta = e.key === 'ArrowDown' ? 1 : e.key === 'ArrowUp' ? -1 : undefined;
@@ -418,7 +480,11 @@ const MessageInput: FC<OwnProps & StateProps> = ({
   function handleChange(e: ChangeEvent<HTMLDivElement>) {
     const { innerHTML, textContent } = e.currentTarget;
 
-    onUpdate(innerHTML === SAFARI_BR ? '' : innerHTML);
+    const newHtml = innerHTML === SAFARI_BR ? '' : innerHTML;
+
+    onUpdate(newHtml);
+    updateHistory(newHtml);
+
 
     // Reset focus on the input to remove any active styling when input is cleared
     if (
@@ -436,7 +502,46 @@ const MessageInput: FC<OwnProps & StateProps> = ({
       }
     }
   }
+  const handlePaste = useLastCallback((e: ClipboardEvent) => {
 
+    const currentHtml = inputRef.current?.innerHTML || '';
+    if (currentHtml !== lastContentRef.current) {
+      updateHistory(currentHtml);
+    }
+  });
+
+  
+  const handleInput = useLastCallback((e: InputEvent) => {
+    const newHtml = inputRef.current?.innerHTML || '';
+    
+    if (!isComposingRef.current) {
+      updateHistory(newHtml);
+    }
+  });
+  const handleCompositionStart = useLastCallback(() => {
+    isComposingRef.current = true;
+  });
+
+  const handleCompositionEnd = useLastCallback(() => {
+    isComposingRef.current = false;
+    updateHistory(inputRef.current?.innerHTML || '');
+  });
+  useEffect(() => {
+    const input = inputRef.current;
+    if (!input) return;
+  
+    input.addEventListener('paste', handlePaste as EventListener);
+    input.addEventListener('input', handleInput as EventListener);
+    input.addEventListener('compositionstart', handleCompositionStart as EventListener);
+    input.addEventListener('compositionend', handleCompositionEnd as EventListener);
+  
+    return () => {
+      input.removeEventListener('paste', handlePaste as EventListener);
+      input.removeEventListener('input', handleInput as EventListener);
+      input.removeEventListener('compositionstart', handleCompositionStart as EventListener);
+      input.removeEventListener('compositionend', handleCompositionEnd as EventListener);
+    };
+  }, [handlePaste, handleInput, handleCompositionStart, handleCompositionEnd]);
   function handleAndroidContextMenu(e: React.MouseEvent<HTMLDivElement, MouseEvent>) {
     if (!checkSelection()) {
       return;

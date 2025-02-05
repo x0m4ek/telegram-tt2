@@ -67,29 +67,29 @@ function analyzeFormatting(element: HTMLElement | null): IFormatAnalysis {
   let hasNestedFormats = false;
   let hasConflictingFormats = false;
 
-  // Get all format elements within the selection
+  
   const selection = window.getSelection();
   if (selection && selection.rangeCount > 0) {
     const range = selection.getRangeAt(0);
     
-    // Get the common ancestor container
+    
     let container = range.commonAncestorContainer;
     if (container.nodeType === Node.TEXT_NODE) {
       container = container.parentElement!;
     }
 
-    // First check the direct parent elements for formats
+    
     let currentElement: HTMLElement | null = container as HTMLElement;
     while (currentElement && currentElement.id !== EDITABLE_INPUT_ID) {
       const tagName = currentElement.tagName.toUpperCase();
-      console.log("TAGNAME",tagName);
+      
       const format = TEXT_FORMAT_BY_TAG_NAME[tagName];
       
       if (format) {
         formats[format] = true;
       }
       
-      // Check for spoiler class
+  
       if (tagName === 'SPAN' && currentElement.classList.contains('spoiler')) {
         formats.spoiler = true;
       }
@@ -97,11 +97,11 @@ function analyzeFormatting(element: HTMLElement | null): IFormatAnalysis {
       currentElement = currentElement.parentElement;
     }
 
-    // Then check all formatted elements within the selection
+   
     const fragment = range.cloneContents();
     const formatElements = Array.from(fragment.querySelectorAll('b,strong,i,em,u,del,code,span.spoiler,blockquote'));
     
-    // Add formats from elements within selection
+
     formatElements.forEach((el) => {
       const tagName = el.tagName.toUpperCase();
       const format = TEXT_FORMAT_BY_TAG_NAME[tagName];
@@ -124,10 +124,10 @@ function analyzeFormatting(element: HTMLElement | null): IFormatAnalysis {
     );
   }
 
-  console.log("Selection range:", selection?.getRangeAt(0));
-  console.log("Formats found:", formats);
-  console.log("Has nested formats:", hasNestedFormats);
-  console.log("Has conflicting formats:", hasConflictingFormats);
+  // console.log("Selection range:", selection?.getRangeAt(0));
+  // console.log("Formats found:", formats);
+  // console.log("Has nested formats:", hasNestedFormats);
+  // console.log("Has conflicting formats:", hasConflictingFormats);
 
   return {
     formats,
