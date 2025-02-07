@@ -477,13 +477,68 @@ const MessageInput: FC<OwnProps & StateProps> = ({
     }
   }
 
+
+interface MarkdownFormatting {
+  bold: boolean;
+  italic: boolean;
+  underline: boolean;
+  strikethrough: boolean;
+  spoiler: boolean;
+  code: boolean;
+  pre: boolean;
+  blockquote: boolean;
+  language?: string;
+}
+
+function processMarkdownInput(html: string, element: HTMLElement): string {
+  
+  const caretPosition = saveCaretPosition(element);
+  
+
+  const processedHtml = html
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&amp;/g, '&');
+
+  
+  const formattedHtml = processedHtml
+    // Bold
+    .replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>')
+    // Italic
+    .replace(/\*([^*]+)\*/g, '<i>$1</i>')
+    // Underline
+    .replace(/__([^_]+)__/g, '<u>$1</u>')
+    // Strikethrough
+    .replace(/~~([^~]+)~~/g, '<s>$1</s>')
+    // Code
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    // Spoiler
+    .replace(/\|\|([^|]+)\|\|/g, '<span class="spoiler">$1</span>')
+    // Blockquote
+    .replace(/^>(.*$)/gm, '<blockquote>$1</blockquote>');
+
+
+  requestAnimationFrame(() => {
+    restoreCaretPosition(element, caretPosition);
+  });
+
+  return formattedHtml;
+}
+
+
   function handleChange(e: ChangeEvent<HTMLDivElement>) {
     const { innerHTML, textContent } = e.currentTarget;
 
-    const newHtml = innerHTML === SAFARI_BR ? '' : innerHTML;
+    let newHtml = innerHTML === SAFARI_BR ? '' : innerHTML;
+    const formattedHtml = processMarkdownInput(newHtml, e.currentTarget);
+  
+  
+  if (formattedHtml !== innerHTML) {
+    e.currentTarget.innerHTML = formattedHtml;
+  }
 
-    onUpdate(newHtml);
-    updateHistory(newHtml);
+  onUpdate(formattedHtml);
+  updateHistory(formattedHtml);
 
 
     // Reset focus on the input to remove any active styling when input is cleared
