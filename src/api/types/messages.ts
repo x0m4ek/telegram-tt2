@@ -531,9 +531,15 @@ export type ApiMessageEntityCustomEmoji = {
   length: number;
   documentId: string;
 };
+export type ApiMessageEntityFolderIcon = {
+  type: ApiMessageEntityTypes.FolderIcon;
+  offset: number;
+  length: number;
+  documentId: string;
+};
 
 export type ApiMessageEntity = ApiMessageEntityDefault | ApiMessageEntityPre | ApiMessageEntityTextUrl |
-ApiMessageEntityMentionName | ApiMessageEntityCustomEmoji | ApiMessageEntityBlockquote;
+ApiMessageEntityMentionName | ApiMessageEntityCustomEmoji | ApiMessageEntityBlockquote | ApiMessageEntityFolderIcon;
 
 export enum ApiMessageEntityTypes {
   Bold = 'MessageEntityBold',
@@ -555,6 +561,7 @@ export enum ApiMessageEntityTypes {
   Spoiler = 'MessageEntitySpoiler',
   CustomEmoji = 'MessageEntityCustomEmoji',
   Unknown = 'MessageEntityUnknown',
+  FolderIcon = "MessageEntityFolderIcon",
 }
 
 export interface ApiFormattedText {

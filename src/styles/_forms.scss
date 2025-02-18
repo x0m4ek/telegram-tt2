@@ -43,6 +43,26 @@
       top: 1rem;
     }
   }
+  &.with-picker {
+    .picker-icon {
+      position: absolute;
+      top: 50%;
+      right: 18px;
+      cursor: pointer;
+      transform: translateY(-50%);
+      i {
+        font-size: 32px;
+      }
+      .emoji {
+        width: 32px;
+        height: 32px;
+        .AnimatedSticker  {
+                width: 32px;
+                height: 32px;
+        }
+      }
+    }
+  }
 
   &.touched label,
   &.error label,

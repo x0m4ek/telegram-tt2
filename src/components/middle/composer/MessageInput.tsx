@@ -1,4 +1,4 @@
-import type { ChangeEvent, RefObject } from 'react';
+  import type { ChangeEvent, RefObject } from 'react';
 import type { FC } from '../../../lib/teact/teact';
 import React, {
   getIsHeavyAnimating,
@@ -489,18 +489,14 @@ interface MarkdownFormatting {
   blockquote: boolean;
   language?: string;
 }
-
 function processMarkdownInput(html: string, element: HTMLElement): string {
-  
   const caretPosition = saveCaretPosition(element);
-  
 
   const processedHtml = html
     .replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>')
     .replace(/&amp;/g, '&');
 
-  
   const formattedHtml = processedHtml
     // Bold
     .replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>')
@@ -514,9 +510,10 @@ function processMarkdownInput(html: string, element: HTMLElement): string {
     .replace(/`([^`]+)`/g, '<code>$1</code>')
     // Spoiler
     .replace(/\|\|([^|]+)\|\|/g, '<span class="spoiler">$1</span>')
+    // Links - Added new regex for markdown links
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>')
     // Blockquote
     .replace(/^>(.*$)/gm, '<blockquote>$1</blockquote>');
-
 
   requestAnimationFrame(() => {
     restoreCaretPosition(element, caretPosition);
@@ -524,6 +521,7 @@ function processMarkdownInput(html: string, element: HTMLElement): string {
 
   return formattedHtml;
 }
+
 
 
   function handleChange(e: ChangeEvent<HTMLDivElement>) {

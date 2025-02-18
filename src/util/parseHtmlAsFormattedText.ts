@@ -198,6 +198,12 @@ function getEntityDataFromNode(
   }
 
   if (type === ApiMessageEntityTypes.CustomEmoji) {
+    console.log({
+      type,
+      offset,
+      length,
+      documentId: (node as HTMLImageElement).dataset.documentId!,
+    },)
     return {
       index,
       entity: {

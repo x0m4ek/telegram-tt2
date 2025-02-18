@@ -3,7 +3,6 @@ import React, {
   memo, useEffect, useMemo, useRef, useState,
 } from '../../../lib/teact/teact';
 import { getActions } from '../../../global';
-
 import type { ApiSession } from '../../../api/types';
 import type { GlobalState } from '../../../global/types';
 import type { FolderEditDispatch } from '../../../hooks/reducers/useFoldersReducer';
@@ -236,6 +235,10 @@ const ChatList: FC<OwnProps> = ({
   }
 
   return (
+    <>
+
+    
+
     <InfiniteScroll
       className={buildClassName('chat-list custom-scroll', isForumPanelOpen && 'forum-panel-open', className)}
       ref={containerRef}
@@ -278,6 +281,8 @@ const ChatList: FC<OwnProps> = ({
         <Loading key="loading" />
       )}
     </InfiniteScroll>
+
+    </>
   );
 };
 

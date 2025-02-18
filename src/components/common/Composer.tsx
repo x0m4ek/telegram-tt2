@@ -1858,7 +1858,7 @@ const Composer: FC<OwnProps & StateProps> = ({
             onFocus={markInputHasFocus}
             onBlur={unmarkInputHasFocus}
             isNeedPremium={isNeedPremium}
-            onUpdateHistory={(html) => console.log(html)}
+            // onUpdateHistory={(html) => console.log(html)}
           />
           {isInMessageList && (
             <>

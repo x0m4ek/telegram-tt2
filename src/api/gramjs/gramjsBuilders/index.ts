@@ -241,7 +241,7 @@ export function buildFilterFromApiFolder(folder: ApiChatFolder): GramJs.DialogFi
     excludedChatIds,
     noTitleAnimations,
   } = folder;
-
+  console.log('folder',folder);
   const pinnedPeers = pinnedChatIds
     ? pinnedChatIds.map(buildInputPeerFromLocalDb).filter(Boolean)
     : [];

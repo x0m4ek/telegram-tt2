@@ -18,8 +18,10 @@ import Menu from './Menu';
 import MenuItem from './MenuItem';
 import MenuSeparator from './MenuSeparator';
 
-import './Tab.scss';
-
+import './Folder.scss';
+import { ApiMessageEntityCustomEmoji } from '../../api/types';
+import CustomEmoji from '../common/CustomEmoji';
+import { IconName } from '../../types/icons';
 type OwnProps = {
   className?: string;
   title: TeactNode;
@@ -32,6 +34,8 @@ type OwnProps = {
   clickArg?: number;
   contextActions?: MenuItemContextAction[];
   contextRootElementSelector?: string;
+  emoticon?:string | ApiMessageEntityCustomEmoji | undefined,
+  withCustomEmoticon?: boolean
 };
 
 const classNames = {
@@ -39,7 +43,7 @@ const classNames = {
   badgeActive: 'Tab__badge--active',
 };
 
-const Tab: FC<OwnProps> = ({
+const Folder: FC<OwnProps> = ({
   className,
   title,
   isActive,
@@ -51,6 +55,8 @@ const Tab: FC<OwnProps> = ({
   clickArg,
   contextActions,
   contextRootElementSelector,
+  emoticon,
+  withCustomEmoticon
 }) => {
   // eslint-disable-next-line no-null/no-null
   const tabRef = useRef<HTMLDivElement>(null);
@@ -130,21 +136,52 @@ const Tab: FC<OwnProps> = ({
     () => document.querySelector('#portals')!.querySelector('.Tab-context-menu .bubble'),
   );
   const getLayout = useLastCallback(() => ({ withPortal: true }));
-
+  console.log(emoticon)
+  const emojiToIconMap: Record<string, IconName> = {
+    '💬': 'folder-chat',
+    '💼': 'folder-icon',
+    '👤': 'folder-user',
+    '⭐': 'folder-star',
+    '🤖':'folder-bot'
+    
+  };
+  
   return (
     <div
-      className={buildClassName('Tab', onClick && 'Tab--interactive', className)}
+      className={buildClassName('Folder', onClick && 'Folder--interactive', className)}
       onClick={handleClick}
       onMouseDown={handleMouseDown}
       onContextMenu={handleContextMenu}
       ref={tabRef}
-    >
-      <span className="Tab_inner">
-        {typeof title === 'string' ? renderText(title) : title}
+    >     
+          {!withCustomEmoticon ? <Icon name={emojiToIconMap[emoticon as string] || 'chat'} className="Folder-Icon" /> :
+          <>
+          <div className='Folder-Icon-Custom'>
+
+          
+           <CustomEmoji
+            documentId={(emoticon as ApiMessageEntityCustomEmoji).documentId}
+            size={46}
+          />
+          </div>
+          </> }
+
+          
+      <span className="Folder_inner">
+      {typeof title === 'string'
+  ? renderText(title, undefined, {
+    removeIconEmoji: true,
+    removeIconOffset: 100,
+  })
+  : renderText(title, undefined, {
+    removeIconEmoji: true,
+    removeIconOffset: 100,
+  })}
         {/* {Boolean(badgeCount) && (
           <span className={buildClassName('badge', isBadgeActive && classNames.badgeActive)}>{badgeCount}</span>
         )} */} 
-        {isBlocked && <Icon name="lock-badge" className="blocked" />}
+
+        {isBlocked && <Icon name="lock-badge" className="blocked"  />}
         <i className="platform" />
       </span>
 
@@ -183,4 +220,4 @@ const Tab: FC<OwnProps> = ({
   );
 };
 
-export default Tab;
+export default Folder;

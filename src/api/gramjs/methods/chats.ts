@@ -1062,9 +1062,9 @@ export async function editChatFolder({
   folderUpdate.excludedChatIds = folderUpdate.excludedChatIds.filter((chatId) => {
     return !folderUpdate.includedChatIds.includes(chatId);
   });
-
+  console.log("UPdating folder",folderUpdate)
   const filter = buildFilterFromApiFolder(folderUpdate);
-
+  console.log("Filters after building:",filter);
   const isActionSuccessful = await invokeRequest(new GramJs.messages.UpdateDialogFilter({
     id,
     filter,

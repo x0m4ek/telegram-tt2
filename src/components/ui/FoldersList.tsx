@@ -13,7 +13,9 @@ import usePreviousDeprecated from '../../hooks/usePreviousDeprecated';
 
 import Tab from './Tab';
 
-import './TabList.scss';
+import './FoldersList.scss';
+import Folder from './Folder';
+import useVerticalScroll from '../../hooks/useVerticalScroll';
 import { ApiMessageEntity } from '../../api/types';
 
 export type TabWithProperties = {
@@ -40,7 +42,7 @@ const TAB_SCROLL_THRESHOLD_PX = 16;
 // Should match duration from `--slide-transition` CSS variable
 const SCROLL_DURATION = IS_IOS ? 450 : IS_ANDROID ? 400 : 300;
 
-const TabList: FC<OwnProps> = ({
+const FoldersList: FC<OwnProps> = ({
   tabs, activeTab, onSwitchTab,
   contextRootElementSelector, className, tabClassName,
 }) => {
@@ -48,7 +50,7 @@ const TabList: FC<OwnProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const previousActiveTab = usePreviousDeprecated(activeTab);
 
-  useHorizontalScroll(containerRef, undefined, true);
+  useVerticalScroll(containerRef, undefined, true);
 
   // Scroll container to place active tab in the center
   useEffect(() => {
@@ -75,15 +77,16 @@ const TabList: FC<OwnProps> = ({
   }, [activeTab]);
 
   const lang = useOldLang();
-
   return (
     <div
-      className={buildClassName('TabList', 'no-scrollbar', className)}
+      className={buildClassName('FoldersList', className)}
       ref={containerRef}
       dir={lang.isRtl ? 'rtl' : undefined}
     >
+      <div className='Folders-scroll custom-scroll'>
+
       {tabs.map((tab, i) => (
-        <Tab
+        <Folder
           key={tab.id}
           title={tab.title}
           isActive={i === activeTab}
@@ -96,10 +99,14 @@ const TabList: FC<OwnProps> = ({
           contextActions={tab.contextActions}
           contextRootElementSelector={contextRootElementSelector}
           className={tabClassName}
+          emoticon={tab.emoticon}
+          withCustomEmoticon={tab.withCustomEmoticon}
         />
       ))}
+              
+              </div>
     </div>
   );
 };
 
-export default memo(TabList);
+export default memo(FoldersList);

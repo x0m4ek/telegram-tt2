@@ -24,7 +24,7 @@ import SafeLink from '../SafeLink';
 export type TextFilter = (
   'escape_html' | 'hq_emoji' | 'emoji' | 'emoji_html' | 'br' | 'br_html' | 
   'highlight' | 'links' | 'simple_markdown' | 'simple_markdown_html' | 
-  'quote' | 'tg_links'
+  'quote' | 'tg_links' | 'remove_icon_emoji'
 );
 
 interface TextToken {
@@ -280,7 +280,42 @@ function renderTextToken(token: TextToken, params: any, filter: TextFilter): Tea
   }
 }
 
+function removeIconEmoji(textParts: TextPart[], params: any): TextPart[] {
+  // Якщо не ввімкнено, пропускаємо
+  if (!params?.removeIconEmoji) {
+    return textParts;
+  }
+  // Якщо offset не 100, теж нічого не робимо
+  if (params.removeIconOffset !== 100) {
+    return textParts;
+  }
 
+  // Якщо взагалі немає текстових частин
+  if (!textParts.length) {
+    return textParts;
+  }
+
+  const firstPart = textParts[0];
+  // Якщо перша частина не є рядком - нічого не вирізаємо
+  if (typeof firstPart !== 'string') {
+    return textParts;
+  }
+
+  // Шукаємо емодзі на початку
+  EMOJI_REGEX.lastIndex = 0;
+  const match = EMOJI_REGEX.exec(firstPart);
+  // Якщо знайдено емодзі (match) і воно починається з індексу 0
+  if (match && match.index === 0) {
+    // Вирізаємо з першого рядка це емодзі
+    const newFirstPart = firstPart.slice(match[0].length);
+
+    // Повертаємо оновлену першу частину + решту
+    return [newFirstPart, ...textParts.slice(1)];
+  }
+
+  // Інакше повертаємо без змін
+  return textParts;
+}
 export default function renderText(
   part: TextPart,
   filters: Array<TextFilter> = ['emoji'],
@@ -288,6 +323,8 @@ export default function renderText(
     highlight?: string;
     quote?: string;
     markdownPostProcessor?: (part: string) => TeactNode;
+    removeIconOffset?: number
+    removeIconEmoji?: boolean;
   },
 ): TeactNode[] {
   if (typeof part !== 'string') {
@@ -320,7 +357,9 @@ export default function renderText(
 
       case 'highlight':
         return addHighlight(text, params!.highlight);
-
+      case 'remove_icon_emoji':
+        return removeIconEmoji(text, params);
+        
       case 'quote':
         return addHighlight(text, params!.quote, true);
 

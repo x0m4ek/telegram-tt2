@@ -1,6 +1,6 @@
 import type { ApiBotCommand } from './bots';
 import type {
-  ApiChatReactions, ApiFormattedText, ApiInputMessageReplyInfo, ApiPhoto, ApiStickerSet,
+  ApiChatReactions, ApiFormattedText, ApiInputMessageReplyInfo, ApiPhoto, ApiSticker, ApiStickerSet,
 } from './messages';
 import type { ApiBotVerification, ApiChatInviteImporter } from './misc';
 import type {
@@ -215,6 +215,7 @@ export interface ApiChatFolder {
   noTitleAnimations?: true;
   description?: string;
   emoticon?: string;
+  emoticonExtended?: ApiSticker;
   contacts?: true;
   nonContacts?: true;
   groups?: true;

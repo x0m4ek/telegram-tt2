@@ -7,6 +7,9 @@ import React, { memo } from '../../lib/teact/teact';
 import buildClassName from '../../util/buildClassName';
 
 import useOldLang from '../../hooks/useOldLang';
+import Icon from '../common/icons/Icon';
+import { ApiEmojiStatus, ApiSticker } from '../../api/types';
+import CustomEmoji from '../common/CustomEmoji';
 
 type OwnProps = {
   ref?: RefObject<HTMLInputElement>;
@@ -18,10 +21,14 @@ type OwnProps = {
   success?: string;
   disabled?: boolean;
   readOnly?: boolean;
+  withEmojiPicker?: boolean;
+  isCustomEmoji?:boolean,
+  customEmoji?:ApiSticker
   placeholder?: string;
   autoComplete?: string;
   maxLength?: number;
   tabIndex?: number;
+  buttonRef?: RefObject<HTMLDivElement>;
   teactExperimentControlled?: boolean;
   inputMode?: 'text' | 'none' | 'tel' | 'url' | 'email' | 'numeric' | 'decimal' | 'search';
   onChange?: (e: ChangeEvent<HTMLInputElement>) => void;
@@ -30,6 +37,7 @@ type OwnProps = {
   onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
   onBlur?: (e: React.FocusEvent<HTMLInputElement>) => void;
   onPaste?: (e: React.ClipboardEvent<HTMLInputElement>) => void;
+  onEmojiClick?: (e: React.MouseEvent) => void;
 };
 
 const InputText: FC<OwnProps> = ({
@@ -37,6 +45,8 @@ const InputText: FC<OwnProps> = ({
   id,
   className,
   value,
+  customEmoji,
+  isCustomEmoji,
   label,
   error,
   success,
@@ -54,6 +64,9 @@ const InputText: FC<OwnProps> = ({
   onKeyDown,
   onBlur,
   onPaste,
+  withEmojiPicker,
+  onEmojiClick,
+  buttonRef,
 }) => {
   const lang = useOldLang();
   const labelText = error || success || label;
@@ -63,10 +76,11 @@ const InputText: FC<OwnProps> = ({
     error ? 'error' : success && 'success',
     disabled && 'disabled',
     readOnly && 'disabled',
+    withEmojiPicker && 'with-picker',
     labelText && 'with-label',
     className,
   );
-
+  console.log(customEmoji)
   return (
     <div className={fullClassName} dir={lang.isRtl ? 'rtl' : undefined}>
       <input
@@ -95,6 +109,40 @@ const InputText: FC<OwnProps> = ({
       {labelText && (
         <label htmlFor={id}>{labelText}</label>
       )}
+
+{withEmojiPicker && (
+  <div className='picker-icon'onClick={onEmojiClick}>
+    {isCustomEmoji ? 
+   <>
+
+<CustomEmoji
+          size={32}
+          key={customEmoji!.id}
+          documentId={customEmoji!.id}
+  
+          ref={buttonRef}
+          />
+   </> 
+  :
+  <Icon  
+  name='folder'
+  onClick={onEmojiClick}
+  ref={buttonRef}
+  />
+  }
+   
+  </div>
+  
+        // <Button
+        // ref={buttonRef}
+        // size="smaller"
+        // color="translucent"
+        // onClick={onEmojiClick}
+        // >
+        //   123
+        // </Button>
+      )}
+
     </div>
   );
 };

@@ -29,6 +29,8 @@ type RenderTextParams = Parameters<typeof renderText>[2];
 
 const HQ_EMOJI_THRESHOLD = 64;
 
+
+
 export function renderTextWithEntities({
   text,
   entities,
@@ -49,6 +51,7 @@ export function renderTextWithEntities({
   noCustomEmojiPlayback,
   focusedQuote,
   isInSelectMode,
+  removeIconEmoji = false,
 }: {
   text: string;
   entities?: ApiMessageEntity[];
@@ -69,9 +72,40 @@ export function renderTextWithEntities({
   noCustomEmojiPlayback?: boolean;
   focusedQuote?: string;
   isInSelectMode?: boolean;
+  removeIconEmoji?: boolean;
 }) {
+  let removedIcon: ApiMessageEntity | undefined;
+
+  if (removeIconEmoji && entities && entities.length) {
+
+    const customEmojis = entities.filter((e) => e.type === ApiMessageEntityTypes.CustomEmoji);
+    if (customEmojis.length) {
+
+      let lastEmoji = customEmojis[0];
+      for (const ce of customEmojis) {
+        if (ce.offset > lastEmoji.offset) {
+          lastEmoji = ce;
+        }
+      }
+
+
+      removedIcon = lastEmoji;
+
+
+      text = text.slice(0, lastEmoji.offset) + text.slice(lastEmoji.offset + lastEmoji.length);
+
+
+      const newEntities = [...entities];
+      const indexToRemove = newEntities.indexOf(lastEmoji);
+      if (indexToRemove !== -1) {
+        newEntities.splice(indexToRemove, 1);
+      }
+      entities = newEntities;
+    }
+  }
+
   if (!entities?.length) {
-    return renderMessagePart({
+    const result = renderMessagePart({
       content: text,
       highlight,
       focusedQuote,
@@ -80,6 +114,7 @@ export function renderTextWithEntities({
       isSimple,
       noLineBreaks,
     });
+    return removeIconEmoji ? { renderedText: result, removedIcon } : result;
   }
 
   const result: TextPart[] = [];
@@ -226,7 +261,7 @@ export function renderTextWithEntities({
     index = entityEndIndex;
   });
 
-  return result;
+  return removeIconEmoji ? { renderedText: result, removedIcon } : result;
 }
 
 export function getTextWithEntitiesAsHtml(formattedText?: ApiFormattedText) {

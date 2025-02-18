@@ -21,6 +21,7 @@ import { MEMO_EMPTY_ARRAY } from '../../../util/memo';
 import { IS_TOUCH_ENV } from '../../../util/windowEnvironment';
 import { renderTextWithEntities } from '../../common/helpers/renderTextWithEntities';
 
+
 import useDerivedState from '../../../hooks/useDerivedState';
 import { useFolderManagerForUnreadCounters } from '../../../hooks/useFolderManager';
 import useHistoryBack from '../../../hooks/useHistoryBack';
@@ -32,6 +33,8 @@ import StoryRibbon from '../../story/StoryRibbon';
 import TabList from '../../ui/TabList';
 import Transition from '../../ui/Transition';
 import ChatList from './ChatList';
+import FoldersList from '../../ui/FoldersList';
+import { render } from 'react-dom';
 
 type OwnProps = {
   onSettingsScreenSelect: (screen: SettingsScreens) => void;
@@ -195,19 +198,28 @@ const ChatFolders: FC<OwnProps & StateProps> = ({
           },
         });
       }
-
+      console.log(folder)
+      const result = renderTextWithEntities({
+        text: title.text,
+        entities: title.entities,
+        noCustomEmojiPlayback: folder.noTitleAnimations,
+        removeIconEmoji: true,
+      });
+      const renderedTitle = Array.isArray(result) ? result : result.renderedText;
+      const renderedIcon = Array.isArray(result) ? undefined : result.removedIcon;
+      
       return {
         id,
-        title: renderTextWithEntities({
-          text: title.text,
-          entities: title.entities,
-          noCustomEmojiPlayback: folder.noTitleAnimations,
-        }),
+        title: renderedTitle,
         badgeCount: folderCountersById[id]?.chatsCount,
         isBadgeActive: Boolean(folderCountersById[id]?.notificationsCount),
         isBlocked,
+        withCustomEmoticon: !!renderedIcon,
+        emoticon:renderedIcon ? renderedIcon :  folder.emoticon,
+        
         contextActions: contextActions?.length ? contextActions : undefined,
       } satisfies TabWithProperties;
+     
     });
   }, [
     displayedFolders, maxFolders, folderCountersById, lang, chatFoldersById, maxChatLists, folderInvitesById,
@@ -307,6 +319,8 @@ const ChatFolders: FC<OwnProps & StateProps> = ({
     const isFolder = activeFolder && !isInAllChatsFolder;
 
     return (
+      <> 
+      
       <ChatList
         folderType={isFolder ? 'folder' : 'all'}
         folderId={isFolder ? activeFolder.id : undefined}
@@ -319,6 +333,7 @@ const ChatFolders: FC<OwnProps & StateProps> = ({
         archiveSettings={archiveSettings}
         sessions={sessions}
       />
+</>
     );
   }
 
@@ -334,7 +349,7 @@ const ChatFolders: FC<OwnProps & StateProps> = ({
       )}
     >
       {shouldRenderStoryRibbon && <StoryRibbon isClosing={isStoryRibbonClosing} />}
-      {shouldRenderFolders ? (
+      {/* {shouldRenderFolders ? (
         <TabList
           contextRootElementSelector="#LeftColumn"
           tabs={folderTabs}
@@ -343,15 +358,30 @@ const ChatFolders: FC<OwnProps & StateProps> = ({
         />
       ) : shouldRenderPlaceholder ? (
         <div ref={placeholderRef} className="tabs-placeholder" />
+      ) : undefined} */}
+
+      <div className='layout_folders_chats'>
+      {shouldRenderFolders ? (
+        <FoldersList
+          contextRootElementSelector="#LeftColumn"
+          tabs={folderTabs}
+          activeTab={activeChatFolder}
+          onSwitchTab={handleSwitchTab}
+        />
+      ) : shouldRenderPlaceholder ? (
+        <div ref={placeholderRef} className="tabs-placeholder" />
       ) : undefined}
+
       <Transition
         ref={transitionRef}
         name={shouldSkipHistoryAnimations ? 'none' : lang.isRtl ? 'slideOptimizedRtl' : 'slideOptimized'}
         activeKey={activeChatFolder}
         renderCount={shouldRenderFolders ? folderTabs.length : undefined}
       >
+        
         {renderCurrentTab}
       </Transition>
+    </div>
     </div>
   );
 };

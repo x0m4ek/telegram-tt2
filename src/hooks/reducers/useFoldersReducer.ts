@@ -1,6 +1,6 @@
 import { getGlobal } from '../../global';
 
-import type { ApiChatFolder } from '../../api/types';
+import { ApiMessageEntityTypes, type ApiChatFolder } from '../../api/types';
 import type { IconName } from '../../types/icons';
 import type { Dispatch, StateReducer } from '../useReducer';
 
@@ -109,14 +109,14 @@ export type FoldersState = {
   error?: string;
   folderId?: number;
   chatFilter: string;
-  folder: Omit<ApiChatFolder, 'id' | 'description' | 'emoticon'>;
+  folder: Omit<ApiChatFolder, 'id' | 'description'>;
   includeFilters?: FolderIncludeFilters;
   excludeFilters?: FolderExcludeFilters;
 };
 export type FoldersActions = (
   'setTitle' | 'saveFilters' | 'editFolder' | 'reset' | 'setChatFilter' | 'setIsLoading' | 'setError' |
   'editIncludeFilters' | 'editExcludeFilters' | 'setIncludeFilters' | 'setExcludeFilters' | 'setIsTouched' |
-  'setFolderId' | 'setIsChatlist'
+  'setFolderId' | 'setIsChatlist' | 'setChatIcon'
   );
 export type FolderEditDispatch = Dispatch<FoldersState, FoldersActions>;
 
@@ -216,9 +216,56 @@ const foldersReducer: StateReducer<FoldersState, FoldersActions> = (
       };
     }
     case 'setChatFilter': {
+      console.log(action)
       return {
         ...state,
         chatFilter: action.payload,
+      };
+    }
+    case 'setChatIcon': {
+      const newEmoji = action.payload.emoji;
+      const newDocumentId = action.payload.documentId;
+    
+      
+      let oldText = state.folder.title.text;
+      let newEntities = [...(state.folder.title.entities || [])];
+    
+      
+      const lastCustomEmojiIndex = newEntities
+        .map((e) => e.type)
+        .lastIndexOf(ApiMessageEntityTypes.CustomEmoji);
+    
+      if (lastCustomEmojiIndex !== -1) {
+      
+        const ent = newEntities[lastCustomEmojiIndex];
+      
+        oldText = oldText.slice(0, ent.offset) + oldText.slice(ent.offset + ent.length);
+      
+        newEntities.splice(lastCustomEmojiIndex, 1);
+      }
+    
+      
+      const offset = oldText.length ? oldText.length + 1 : 0;
+      const newText = oldText + (oldText ? ' ' : '') + newEmoji;
+    
+      
+      newEntities.push({
+        documentId: newDocumentId,
+        type: ApiMessageEntityTypes.CustomEmoji,
+        offset,
+        length: newEmoji.length,
+      });
+    
+      return {
+        ...state,
+        folder: {
+          ...state.folder,
+          title: {
+            text: newText,
+            entities: newEntities,
+          },
+          emoticon: newEmoji,
+        },
       };
     }
     case 'setIsTouched': {

@@ -187,6 +187,7 @@ const SettingsFolders: FC<OwnProps> = ({
           isOnlyInvites={currentScreen === SettingsScreens.FoldersEditFolderInvites}
           onBack={onReset}
           onSaveFolder={handleSaveFolder}
+          handleSaveFilter={handleSaveFilter}
         />
       );
     case SettingsScreens.FoldersIncludedChats:

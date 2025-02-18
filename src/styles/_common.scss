@@ -98,6 +98,13 @@
 }
 
 // Used by ChatList and ContactList components
+.layout_folders_chats {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  grid-template-rows: 100%;
+  grid-template-columns: 100px minmax(0, 100%);
+}
 .chat-list {
   background: var(--color-background);
   height: 100%;
