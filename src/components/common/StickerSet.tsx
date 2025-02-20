@@ -178,7 +178,6 @@ const StickerSet: FC<OwnProps> = ({
   });
 
   const handleDefaultTopicIconClick = useLastCallback(() => {
-    console.log("here")
     onStickerSelect?.({
       mediaType: 'sticker',
       id: DEFAULT_TOPIC_ICON_STICKER_ID,

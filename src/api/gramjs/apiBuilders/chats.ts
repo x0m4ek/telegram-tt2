@@ -20,6 +20,7 @@ import type {
   ApiSendAsPeerId,
   ApiSponsoredMessageReportResult,
   ApiStarsSubscriptionPricing,
+  ApiSticker,
   ApiTopic,
 } from '../../types';
 
@@ -413,12 +414,30 @@ export function buildChatTypingStatus(
     timestamp: Date.now() + getServerTimeOffset() * 1000,
   };
 }
-
 export function buildApiChatFolder(filter: GramJs.DialogFilter | GramJs.DialogFilterChatlist): ApiChatFolder {
+  
+  const processedTitle = buildApiFormattedText(filter.title);
+  let customIcon:ApiSticker | undefined;
+  if (processedTitle.entities) {
+    const emojiEntity = processedTitle.entities.find(entity => 
+      entity.type === "MessageEntityCustomEmoji",
+    );
+    if (emojiEntity) {
+      customIcon = {
+        emoji: filter.emoticon,
+        id: emojiEntity.documentId,
+        mediaType:'sticker',
+        isLottie:false,
+        stickerSetInfo:{isMissing:true},
+        isVideo:false,
+      };
+    }
+  }
+
   if (filter instanceof GramJs.DialogFilterChatlist) {
     return {
       ...pickTruthy(filter, [
-        'id', 'emoticon',
+        'id',
       ]),
       excludedChatIds: [],
       includedChatIds: filter.includePeers.map(getApiChatIdFromMtpPeer).filter(Boolean),
@@ -426,21 +445,25 @@ export function buildApiChatFolder(filter: GramJs.DialogFilter | GramJs.DialogFi
       hasMyInvites: filter.hasMyInvites,
       isChatList: true,
       noTitleAnimations: filter.titleNoanimate,
-      title: buildApiFormattedText(filter.title),
+      title: processedTitle,
+      emoticon: customIcon ? undefined : filter.emoticon, // Use emoticon only if no custom emoji
+      customEmoji: customIcon,
     };
   }
 
   return {
     ...pickTruthy(filter, [
-      'id', 'emoticon', 'contacts', 'nonContacts', 'groups', 'bots',
+      'id', 'contacts', 'nonContacts', 'groups', 'bots',
       'excludeMuted', 'excludeRead', 'excludeArchived',
     ]),
     channels: filter.broadcasts,
     pinnedChatIds: filter.pinnedPeers.map(getApiChatIdFromMtpPeer).filter(Boolean),
     includedChatIds: filter.includePeers.map(getApiChatIdFromMtpPeer).filter(Boolean),
     excludedChatIds: filter.excludePeers.map(getApiChatIdFromMtpPeer).filter(Boolean),
-    title: buildApiFormattedText(filter.title),
+    title: processedTitle,
     noTitleAnimations: filter.titleNoanimate,
+    emoticon: customIcon ? undefined : filter.emoticon, // Use emoticon only if no custom emoji
+    customEmoji: customIcon,
   };
 }
 

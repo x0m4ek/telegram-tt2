@@ -22,7 +22,6 @@ import useCurrentOrPrev from '../../../hooks/useCurrentOrPrev';
 import { getIsMobile } from '../../../hooks/useAppLayout';
 import { REM } from '../../common/helpers/mediaDimensions';
 import buildClassName from '../../../util/buildClassName';
-import EmojiPicker from '../../middle/composer/EmojiPicker';
 
 export type OwnProps = {
   isOpen: boolean;
@@ -54,7 +53,6 @@ const FolderPickerMenu: FC<OwnProps & StateProps> = ({
   const FULL_PICKER_SHIFT_DELTA = { x: -23, y: -64 };
   const LIMITED_PICKER_SHIFT_DELTA = { x: -21, y: -10 };
   const REACTION_SELECTOR_WIDTH = 16.375 * REM;
-  const transformOriginX = useRef<number>();
   const [isContextMenuShown, markContextMenuShown, unmarkContextMenuShown] = useFlag();
   const contextRootElementSelector="#LeftColumn"
 //   const getTriggerElement = useLastCallback(() => buttonRef.current);
@@ -72,7 +70,7 @@ const FolderPickerMenu: FC<OwnProps & StateProps> = ({
     }
   }, [areFeaturedStickersLoaded, isOpen, loadFeaturedEmojiStickers]);
 
-  const handleEmojiSelect = useCallback((sticker: string, name:string) => {
+  const handleEmojiSelect = useCallback((sticker: ApiSticker) => {
     onEmojiStatusSelect(sticker);
     onClose();
   }, [onClose, onEmojiStatusSelect]);
@@ -130,18 +128,37 @@ const FolderPickerMenu: FC<OwnProps & StateProps> = ({
         bubbleClassName={styles.menuContent}
       >
         <CustomEmojiPicker
-          idPrefix="status-emoji-set-"
           loadAndPlay={isOpen}
           isHidden={!isOpen}
-          // це фіксить переключатель але треба інший спосіб знайти бо це додає деякі непотрібні смайлики дефолтні
-          withDefaultTopicIcons={true}
-          // isStatusPicker
           isTranslucent={isTranslucent}
           onContextMenuOpen={markContextMenuShown}
           onContextMenuClose={unmarkContextMenuShown}
           onCustomEmojiSelect={handleEmojiSelect}
           onContextMenuClick={onClose}
         />
+        {/* <SymbolMenuAsync
+          idPrefix="status-emoji-set-"
+          isOpen={isOpen}
+          onClose={onClose}
+
+          // isHidden={!isOpen}
+          // це фіксить переключатель але треба інший спосіб знайти бо це додає деякі непотрібні смайлики дефолтні
+          // withDefaultTopicIcons={true}
+          // isReactionPicker
+          // isTranslucent={isTranslucent}
+          // onContextMenuOpen={markContextMenuShown}
+          // onContextMenuClose={unmarkContextMenuShown}
+          onCustomEmojiSelect={handleEmojiSelect}
+          onEmojiSelect={handleEmojiSelect}
+          chatId={'#6015926231'}
+          onLoad={() => console.log("LOaded")}
+          anchor={contextMenuAnchor}
+          getTriggerElement={getTriggerElement}
+          getRootElement={getRootElement}
+          getMenuElement={getMenuElement}
+          getLayout={getLayout}
+          // onContextMenuClick={onClose}
+        /> */}
         {/* <EmojiPicker
              idPrefix="status-emoji-set-"
           loadAndPlay={isOpen}

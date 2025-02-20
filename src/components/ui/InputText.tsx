@@ -10,6 +10,7 @@ import useOldLang from '../../hooks/useOldLang';
 import Icon from '../common/icons/Icon';
 import { ApiEmojiStatus, ApiSticker } from '../../api/types';
 import CustomEmoji from '../common/CustomEmoji';
+import { emojiToIconMap } from './Folder';
 
 type OwnProps = {
   ref?: RefObject<HTMLInputElement>;
@@ -23,7 +24,7 @@ type OwnProps = {
   readOnly?: boolean;
   withEmojiPicker?: boolean;
   isCustomEmoji?:boolean,
-  customEmoji?:ApiSticker
+  customEmoji?:ApiSticker | string 
   placeholder?: string;
   autoComplete?: string;
   maxLength?: number;
@@ -80,7 +81,9 @@ const InputText: FC<OwnProps> = ({
     labelText && 'with-label',
     className,
   );
-  console.log(customEmoji)
+  function isApiSticker(value: string | ApiSticker): value is ApiSticker {
+    return typeof value !== 'string';
+  }
   return (
     <div className={fullClassName} dir={lang.isRtl ? 'rtl' : undefined}>
       <input
@@ -111,39 +114,24 @@ const InputText: FC<OwnProps> = ({
       )}
 
 {withEmojiPicker && (
-  <div className='picker-icon'onClick={onEmojiClick}>
-    {isCustomEmoji ? 
-   <>
-
-<CustomEmoji
-          size={32}
-          key={customEmoji!.id}
-          documentId={customEmoji!.id}
-  
-          ref={buttonRef}
-          />
-   </> 
-  :
-  <Icon  
-  name='folder'
-  onClick={onEmojiClick}
-  ref={buttonRef}
-  />
-  }
-   
+  <div className="picker-icon" onClick={onEmojiClick}>
+    {isCustomEmoji && isApiSticker(customEmoji!) ? (
+      <CustomEmoji
+        size={32}
+        key={customEmoji.id}
+        documentId={customEmoji.id}
+        ref={buttonRef}
+      />
+    ) : (
+      <Icon
+        name={emojiToIconMap[customEmoji as string] || 'chat'}
+        onClick={onEmojiClick}
+        ref={buttonRef}
+      />
+    )}
   </div>
-  
-        // <Button
-        // ref={buttonRef}
-        // size="smaller"
-        // color="translucent"
-        // onClick={onEmojiClick}
-        // >
-        //   123
-        // </Button>
-      )}
-
-    </div>
+)}
+</div>
   );
 };
 

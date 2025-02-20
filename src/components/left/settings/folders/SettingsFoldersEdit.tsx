@@ -31,19 +31,10 @@ import FloatingActionButton from '../../../ui/FloatingActionButton';
 import InputText from '../../../ui/InputText';
 import ListItem from '../../../ui/ListItem';
 import Spinner from '../../../ui/Spinner';
-import useCustomEmojiTooltip from '../../../middle/composer/hooks/useCustomEmojiTooltip';
-import StatusPickerMenuAsync from '../../main/StatusPickerMenu.async';
-import Button from '../../../ui/Button';
-import useFlag from '../../../../hooks/useFlag';
-import StatusButton from '../../main/StatusButton';
 import useContextMenuHandlers from '../../../../hooks/useContextMenuHandlers';
-import Menu from '../../../ui/Menu';
 import useLastCallback from '../../../../hooks/useLastCallback';
-import FolderPickerMenuAsync from '../../main/FolderPickerMenu.async';
 import FolderPickerMenu from '../../main/FolderPickerMenu';
 import { IAnchorPosition } from '../../../../types';
-import renderText from '../../../common/helpers/renderText';
-import CustomEmoji from '../../../common/CustomEmoji';
 import EMOJI_REGEX from "../../../../lib/twemojiRegex";
 type OwnProps = {
   state: FoldersState;
@@ -97,7 +88,6 @@ const SettingsFoldersEdit: FC<OwnProps & StateProps> = ({
   maxChatLists,
   chatListCount,
   onSaveFolder,
-  handleSaveFilter,
 }) => {
   const {
     loadChatlistInvites,
@@ -169,12 +159,10 @@ const SettingsFoldersEdit: FC<OwnProps & StateProps> = ({
 
   const handleChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const { currentTarget } = event;
-    console.log(currentTarget.value.trim())
-    dispatch({ type: 'setTitle', payload: currentTarget.value.trim() });
+    dispatch({ type: 'setTitle', payload: currentTarget.value });
   }, [dispatch]);
 
   const handleSubmit = useCallback(() => {
-    // handleSaveFilter();
     dispatch({ type: 'setIsLoading', payload: true });
 
     onSaveFolder(() => {
@@ -304,26 +292,18 @@ const SettingsFoldersEdit: FC<OwnProps & StateProps> = ({
       </>
     );
   }
-  const [sticker, setSticker] = useState<ApiSticker | undefined>(undefined);
   const handleEmojiClick = useCallback((sticker:ApiSticker) => {
-    setSticker(sticker);
-    console.log(sticker)
     dispatch({
       type: 'setIsTouched',
       payload: true,
     });
     dispatch({
       type: 'setChatIcon',
-      payload: {documentId:sticker.id, emoji:sticker.emoji},
+      payload: {id:sticker.id, emoji:sticker.emoji},
     });
  
-    // onSaveFolder(() => {
-    //   setTimeout(() => {
-    //     onReset();
-    //   }, SUBMIT_TIMEOUT);
-    // });
     
-  }, [setSticker,onReset,onSaveFolder,dispatch]);
+  }, [onReset,onSaveFolder,dispatch]);
   const [position ,setPosition] = useState<IAnchorPosition | undefined>(undefined);
   const handleOpenPicker = useLastCallback((e: React.MouseEvent) => {
     const bound = iconRef.current?.getBoundingClientRect() || { x: 0, y: 0 };
@@ -333,46 +313,49 @@ const SettingsFoldersEdit: FC<OwnProps & StateProps> = ({
       y:bound.y,
     })
   })
-  function removeLastEmojiIfAny(str: string): string {
-    const originalLength = str.length;
-  
-  
-    const trimmed = str.trimEnd();
-    if (!trimmed) {
+function removeLastEmojiIfAny(str: string): string {
+  const originalLength = str.length;
+  const trimmed = str.trimEnd(); 
+  if (!trimmed) {
+    return str; 
+  }
 
-      return str;
-    }
-  
-    let lastIndex = -1;
-    let lastMatch = '';
-    EMOJI_REGEX.lastIndex = 0;
-  
-    let match;
+  let lastIndex = -1;
+  let lastMatch = '';
+  EMOJI_REGEX.lastIndex = 0; 
+
+  let match;
     while ((match = EMOJI_REGEX.exec(trimmed)) !== null) {
-      lastIndex = match.index;
-      lastMatch = match[0];
-    }
+    lastIndex = match.index;
+    lastMatch = match[0];
+  }
 
-    if (lastIndex === -1) {
-      return str; 
-    }
   
-   
-    if (lastIndex + lastMatch.length === trimmed.length) {
-
-      const diff = originalLength - trimmed.length;
-    
-      const startPos = lastIndex + diff;
-  
-      const endPos = startPos + lastMatch.length;
-  
-
-      return str.slice(0, startPos) + str.slice(endPos);
-    }
-  
-
+  if (lastIndex === -1) {
     return str;
   }
+
+  
+  if (lastIndex + lastMatch.length === trimmed.length) {
+  
+    const diff = originalLength - trimmed.length;
+
+  
+    let startPos = lastIndex + diff;
+    let endPos = startPos + lastMatch.length;
+
+  
+    if (startPos > 0 && str[startPos - 1] === ' ') {
+      startPos--;
+    }
+
+    return str.slice(0, startPos) + str.slice(endPos);
+  }
+
+  
+  return str;
+}
+
   return (
     <div className="settings-fab-wrapper">
       <div className="settings-content no-border custom-scroll">
@@ -405,13 +388,13 @@ const SettingsFoldersEdit: FC<OwnProps & StateProps> = ({
             className="mb-0"
             label={lang('FilterNameHint')}
             value={removeLastEmojiIfAny(state.folder.title.text)}
-            onChange={handleChange}
+            onChange={(e) => dispatch({ type: 'setTitle', payload: e.currentTarget.value })}
             error={state.error && state.error === ERROR_NO_TITLE ? ERROR_NO_TITLE : undefined}
             withEmojiPicker={true} 
             onEmojiClick={handleOpenPicker}
             buttonRef={iconRef}
-            customEmoji={sticker || state.folder.emoticon}
-            isCustomEmoji={sticker?.isCustomEmoji}
+            customEmoji={state.folder.customEmoji || state.folder.emoticon}
+            isCustomEmoji={!!state.folder.customEmoji}
             
           />
   

@@ -229,6 +229,7 @@ export interface ApiChatFolder {
   excludedChatIds: string[];
   isChatList?: true;
   hasMyInvites?: true;
+  customEmoji?: ApiSticker | string;
 }
 
 export interface ApiChatSettings {

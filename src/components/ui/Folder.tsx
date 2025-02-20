@@ -42,7 +42,14 @@ const classNames = {
   active: 'Tab--active',
   badgeActive: 'Tab__badge--active',
 };
-
+export const emojiToIconMap: Record<string, IconName> = {
+  '💬': 'folder-chat',
+  '💼': 'folder-icon',
+  '👤': 'folder-user',
+  '⭐': 'folder-star',
+  '🤖':'folder-bot'
+  
+};
 const Folder: FC<OwnProps> = ({
   className,
   title,
@@ -137,14 +144,7 @@ const Folder: FC<OwnProps> = ({
   );
   const getLayout = useLastCallback(() => ({ withPortal: true }));
   console.log(emoticon)
-  const emojiToIconMap: Record<string, IconName> = {
-    '💬': 'folder-chat',
-    '💼': 'folder-icon',
-    '👤': 'folder-user',
-    '⭐': 'folder-star',
-    '🤖':'folder-bot'
-    
-  };
+
   
   return (
     <div
@@ -177,9 +177,9 @@ const Folder: FC<OwnProps> = ({
     removeIconEmoji: true,
     removeIconOffset: 100,
   })}
-        {/* {Boolean(badgeCount) && (
+        {Boolean(badgeCount) && (
           <span className={buildClassName('badge', isBadgeActive && classNames.badgeActive)}>{badgeCount}</span>
-        )} */} 
+        )} 
 
         {isBlocked && <Icon name="lock-badge" className="blocked"  />}
         <i className="platform" />

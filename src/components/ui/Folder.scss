@@ -49,6 +49,14 @@
       .custom-emoji {
         width: 46px !important;
     height: 46px !important;
+    img {
+      width: 46px !important;
+      height: 46px !important;
+    }
+    video {
+      width: 46px !important;
+      height: 46px !important;
+    }
     .AnimatedSticker {
       width: 46px !important;
     height: 46px !important;
@@ -64,12 +72,15 @@
       // white-space: nowrap;
       word-break: break-all;
       gap: 1px; // Prevent custom emoji sticking to the text
+      width: -webkit-fill-available;
     }
   
     .badge {
       min-width: 1.25rem;
       height: 1.25rem;
-      margin-inline-start: 0.5rem;
+      position: absolute;
+      top: -58px;
+      right: 15px;
       background: var(--color-gray);
       border-radius: 0.75rem;
       padding: 0 0.3125rem;
