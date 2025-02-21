@@ -86,7 +86,7 @@ export { default as StoryStatistics } from '../components/right/statistics/Story
 export { default as PollResults } from '../components/right/PollResults';
 export { default as CreateTopic } from '../components/right/CreateTopic';
 export { default as EditTopic } from '../components/right/EditTopic';
-
+export {default as FolderPickerMenu} from '../components/left/main/FolderPickerMenu';
 export { default as Management } from '../components/right/management/Management';
 
 export { default as PaymentModal } from '../components/payment/PaymentModal';

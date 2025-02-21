@@ -16,7 +16,7 @@ import Tab from './Tab';
 import './FoldersList.scss';
 import Folder from './Folder';
 import useVerticalScroll from '../../hooks/useVerticalScroll';
-import { ApiMessageEntity } from '../../api/types';
+import { ApiMessageEntity, ApiMessageEntityCustomEmoji } from '../../api/types';
 
 export type TabWithProperties = {
   id?: number;
@@ -25,7 +25,7 @@ export type TabWithProperties = {
   isBlocked?: boolean;
   isBadgeActive?: boolean;
   contextActions?: MenuItemContextAction[];
-  emoticon?:string | undefined | ApiMessageEntity,
+  emoticon?: string | ApiMessageEntityCustomEmoji | undefined;
   withCustomEmoticon?: boolean
 };
 

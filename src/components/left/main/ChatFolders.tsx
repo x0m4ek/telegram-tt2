@@ -4,7 +4,7 @@ import React, {
 } from '../../../lib/teact/teact';
 import { getActions, getGlobal, withGlobal } from '../../../global';
 
-import type { ApiChatFolder, ApiChatlistExportedInvite, ApiSession } from '../../../api/types';
+import { ApiMessageEntityTypes, type ApiChatFolder, type ApiChatlistExportedInvite, type ApiSession } from '../../../api/types';
 import type { GlobalState } from '../../../global/types';
 import type { FolderEditDispatch } from '../../../hooks/reducers/useFoldersReducer';
 import type { LeftColumnContent, SettingsScreens } from '../../../types';
@@ -19,7 +19,7 @@ import captureEscKeyListener from '../../../util/captureEscKeyListener';
 import { captureEvents, SwipeDirection } from '../../../util/captureEvents';
 import { MEMO_EMPTY_ARRAY } from '../../../util/memo';
 import { IS_TOUCH_ENV } from '../../../util/windowEnvironment';
-import { renderTextWithEntities } from '../../common/helpers/renderTextWithEntities';
+import { processTextWithIcon, renderTextWithEntities } from '../../common/helpers/renderTextWithEntities';
 
 
 import useDerivedState from '../../../hooks/useDerivedState';
@@ -198,15 +198,8 @@ const ChatFolders: FC<OwnProps & StateProps> = ({
           },
         });
       }
-      console.log(folder)
-      const result = renderTextWithEntities({
-        text: title.text,
-        entities: title.entities,
-        noCustomEmojiPlayback: folder.noTitleAnimations,
-        removeIconEmoji: true,
-      });
-      const renderedTitle = Array.isArray(result) ? result : result.renderedText;
-      const renderedIcon = Array.isArray(result) ? undefined : result.removedIcon;
+      const { text: renderedTitle, icon: renderedIcon } = processTextWithIcon(title);
+      const customEmoji = renderedIcon?.type === ApiMessageEntityTypes.CustomEmoji ? renderedIcon : undefined;
       
       return {
         id,
@@ -214,8 +207,8 @@ const ChatFolders: FC<OwnProps & StateProps> = ({
         badgeCount: folderCountersById[id]?.chatsCount,
         isBadgeActive: Boolean(folderCountersById[id]?.notificationsCount),
         isBlocked,
-        withCustomEmoticon: !!renderedIcon,
-        emoticon:renderedIcon ? renderedIcon :  folder.emoticon,
+        withCustomEmoticon: !!customEmoji,
+        emoticon: customEmoji || folder.emoticon,
         
         contextActions: contextActions?.length ? contextActions : undefined,
       } satisfies TabWithProperties;

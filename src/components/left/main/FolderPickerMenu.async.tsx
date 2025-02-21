@@ -9,7 +9,7 @@ import useModuleLoader from '../../../hooks/useModuleLoader';
 
 const FolderPickerMenuAsync: FC<OwnProps> = (props) => {
   const { isOpen } = props;
-  const FolderPickerMenu = useModuleLoader(Bundles.Extra, 'StatusPickerMenu', !isOpen);
+  const FolderPickerMenu = useModuleLoader(Bundles.Extra, 'FolderPickerMenu', !isOpen);
 
   // eslint-disable-next-line react/jsx-props-no-spreading
   return FolderPickerMenu ? <FolderPickerMenu {...props} /> : undefined;

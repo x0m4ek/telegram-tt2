@@ -44,6 +44,7 @@
     }
   }
   &.with-picker {
+    color: var(--color-text-secondary);
     .picker-icon {
       position: absolute;
       top: 50%;
@@ -59,6 +60,7 @@
       }
       .emoji {
         width: 32px !important;
+        
         height: 32px !important;
         img {
           width: 32px !important;

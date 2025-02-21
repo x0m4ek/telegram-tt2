@@ -19,7 +19,10 @@ import CodeBlock from '../code/CodeBlock';
 import CustomEmoji from '../CustomEmoji';
 import SafeLink from '../SafeLink';
 import Spoiler from '../spoiler/Spoiler';
-
+interface TextWithRemovedIcon {
+  text: TextPart[];
+  icon?: ApiMessageEntity;
+}
 interface IOrganizedEntity {
   entity: ApiMessageEntity;
   organizedIndexes: Set<number>;
@@ -28,7 +31,6 @@ interface IOrganizedEntity {
 type RenderTextParams = Parameters<typeof renderText>[2];
 
 const HQ_EMOJI_THRESHOLD = 64;
-
 
 
 export function renderTextWithEntities({
@@ -73,40 +75,27 @@ export function renderTextWithEntities({
   focusedQuote?: string;
   isInSelectMode?: boolean;
   removeIconEmoji?: boolean;
-}) {
-  let removedIcon: ApiMessageEntity | undefined;
+}){
 
-  if (removeIconEmoji && entities && entities.length) {
 
+  let workingText = text;
+  let workingEntities = entities;
+
+  // Якщо потрібно видалити іконку, робимо це на початку
+  if (removeIconEmoji && entities?.length) {
     const customEmojis = entities.filter((e) => e.type === ApiMessageEntityTypes.CustomEmoji);
     if (customEmojis.length) {
-
-      let lastEmoji = customEmojis[0];
-      for (const ce of customEmojis) {
-        if (ce.offset > lastEmoji.offset) {
-          lastEmoji = ce;
-        }
-      }
-
-
-      removedIcon = lastEmoji;
-
-
-      text = text.slice(0, lastEmoji.offset) + text.slice(lastEmoji.offset + lastEmoji.length);
-
-
-      const newEntities = [...entities];
-      const indexToRemove = newEntities.indexOf(lastEmoji);
-      if (indexToRemove !== -1) {
-        newEntities.splice(indexToRemove, 1);
-      }
-      entities = newEntities;
+      const lastEmoji = customEmojis.reduce((prev, curr) => 
+        curr.offset > prev.offset ? curr : prev
+      );
+      workingText = text.slice(0, lastEmoji.offset) + text.slice(lastEmoji.offset + lastEmoji.length);
+      workingEntities = entities.filter((e) => e !== lastEmoji);
     }
   }
 
-  if (!entities?.length) {
-    const result = renderMessagePart({
-      content: text,
+  if (!workingEntities?.length) {
+    return renderMessagePart({
+      content: workingText,
       highlight,
       focusedQuote,
       emojiSize,
@@ -114,13 +103,17 @@ export function renderTextWithEntities({
       isSimple,
       noLineBreaks,
     });
-    return removeIconEmoji ? { renderedText: result, removedIcon } : result;
   }
+
+
+
+    
+    
 
   const result: TextPart[] = [];
   let deleteLineBreakAfterPre = false;
 
-  const organizedEntities = organizeEntities(entities);
+  const organizedEntities = organizeEntities(workingEntities);
 
   // Recursive function to render regular and nested entities
   function renderEntity(
@@ -261,9 +254,10 @@ export function renderTextWithEntities({
     index = entityEndIndex;
   });
 
-  return removeIconEmoji ? { renderedText: result, removedIcon } : result;
-}
 
+
+  return result;
+}
 export function getTextWithEntitiesAsHtml(formattedText?: ApiFormattedText) {
   const { text, entities } = formattedText || {};
   if (!text) {
@@ -282,7 +276,6 @@ export function getTextWithEntitiesAsHtml(formattedText?: ApiFormattedText) {
 
   return result;
 }
-
 function renderMessagePart({
   content,
   highlight,
@@ -723,4 +716,41 @@ function handleCodeClick(e: React.MouseEvent<HTMLElement>) {
   getActions().showNotification({
     message: oldTranslate('TextCopied'),
   });
+}
+export function processTextWithIcon(formattedText: ApiFormattedText): TextWithRemovedIcon {
+  if (!formattedText.text) {
+    return { text: [] };
+  }
+
+  let icon: ApiMessageEntity | undefined;
+  const customEmojis = formattedText.entities?.filter((e) => e.type === ApiMessageEntityTypes.CustomEmoji) || [];
+  
+  if (customEmojis.length) {
+    icon = customEmojis.reduce((prev, curr) => 
+      curr.offset > prev.offset ? curr : prev
+    );
+    
+    
+    const workingText = formattedText.text.slice(0, icon.offset) + 
+                       formattedText.text.slice(icon.offset + icon.length);
+    const workingEntities = formattedText.entities?.filter((e) => e !== icon);
+
+
+    const renderedText = renderTextWithEntities({
+      text: workingText,
+      entities: workingEntities,
+      noCustomEmojiPlayback: true,
+    });
+
+    return { text: renderedText, icon };
+  }
+
+
+  const renderedText = renderTextWithEntities({
+    text: formattedText.text,
+    entities: formattedText.entities || undefined, 
+    noCustomEmojiPlayback: true,
+  });
+
+  return { text: renderedText };
 }
