@@ -219,6 +219,8 @@ export const DEFAULT_TOPIC_ICON_STICKER_ID = 'topic-default-icon';
 export const DEFAULT_STATUS_ICON_ID = 'status-default-icon';
 export const EMOJI_IMG_REGEX = /<img[^>]+alt="([^"]+)"(?![^>]*data-document-id)[^>]*>/gm;
 
+export const FOLDER_SYMBOL_SET_ID = 'folderEmojis';
+
 export const BASE_EMOJI_KEYWORD_LANG = 'en';
 
 export const MENU_TRANSITION_DURATION = 200;

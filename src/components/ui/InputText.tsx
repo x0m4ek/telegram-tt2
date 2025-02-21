@@ -10,7 +10,7 @@ import useOldLang from '../../hooks/useOldLang';
 import Icon from '../common/icons/Icon';
 import { ApiEmojiStatus, ApiSticker } from '../../api/types';
 import CustomEmoji from '../common/CustomEmoji';
-import { emojiToIconMap } from './Folder';
+import { emojiToIconMap } from '../../util/FolderEmojis';
 
 type OwnProps = {
   ref?: RefObject<HTMLInputElement>;

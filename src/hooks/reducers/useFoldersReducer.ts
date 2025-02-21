@@ -1,5 +1,5 @@
 import { getGlobal } from '../../global';
-import { ApiMessageEntity, ApiMessageEntityTypes, type ApiChatFolder } from '../../api/types';
+import {  ApiMessageEntityTypes, type ApiChatFolder } from '../../api/types';
 import type { IconName } from '../../types/icons';
 import type { Dispatch, StateReducer } from '../useReducer';
 import { selectChat } from '../../global/selectors';
@@ -116,7 +116,7 @@ export type FoldersState = {
 export type FoldersActions = (
   'setTitle' | 'saveFilters' | 'editFolder' | 'reset' | 'setChatFilter' | 'setIsLoading' | 'setError' |
   'editIncludeFilters' | 'editExcludeFilters' | 'setIncludeFilters' | 'setExcludeFilters' | 'setIsTouched' |
-  'setFolderId' | 'setIsChatlist' | 'setChatIcon'
+  'setFolderId' | 'setIsChatlist' | 'setFolderIcon'
 );
 export type FolderEditDispatch = Dispatch<FoldersState, FoldersActions>;
 
@@ -278,14 +278,41 @@ const foldersReducer: StateReducer<FoldersState, FoldersActions> = (
         chatFilter: action.payload,
       };
     }
-    case 'setChatIcon': {
-      const newEmoji = action.payload.emoji;
-      const newDocumentId = action.payload.id;
-    
+    case 'setFolderIcon': {
+   
+      const { newEmoji,  id, isFolderIcon } = action.payload;
+      const newDocumentId = id;
       let oldText = state.folder.title.text;
       let newEntities = [...(state.folder.title.entities || [])];
+      if (isFolderIcon) {
+     
+        const lastCustomEmojiIndex = newEntities
+          .map((e) => e.type)
+          .lastIndexOf(ApiMessageEntityTypes.CustomEmoji);
     
-      // Видаляємо попередній кастомний емодзі (якщо є)
+        if (lastCustomEmojiIndex !== -1) {
+          const ent = newEntities[lastCustomEmojiIndex];
+          oldText =
+            oldText.slice(0, ent.offset) +
+            oldText.slice(ent.offset + ent.length);
+          newEntities.splice(lastCustomEmojiIndex, 1);
+        }
+    
+        return {
+          ...state,
+          isTouched: true,
+          folder: {
+            ...state.folder,
+            emoticon: newEmoji,
+            customEmoji: undefined,
+            title: {
+              text: oldText,
+              entities: newEntities,
+            },
+          },
+        };
+      }
+    
       const lastCustomEmojiIndex = newEntities
         .map((e) => e.type)
         .lastIndexOf(ApiMessageEntityTypes.CustomEmoji);
@@ -296,13 +323,9 @@ const foldersReducer: StateReducer<FoldersState, FoldersActions> = (
         newEntities.splice(lastCustomEmojiIndex, 1);
       }
     
-      // Замість:
-      // const offset = oldText.length ? oldText.length + 1 : 0;
-      // const newText = oldText + (oldText ? ' ' : '') + newEmoji;
     
-      // Робимо:
-      const offset = oldText.length; // зміщення = довжина старого тексту
-      const newText = oldText + newEmoji; // додаємо емодзі без пробілу
+      const offset = oldText.length; 
+      const newText = oldText + newEmoji; 
     
       newEntities.push({
         documentId: newDocumentId,
@@ -313,6 +336,7 @@ const foldersReducer: StateReducer<FoldersState, FoldersActions> = (
     
       return {
         ...state,
+        isTouched: true,
         folder: {
           ...state.folder,
           title: {

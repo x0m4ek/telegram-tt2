@@ -25,7 +25,7 @@ import buildClassName from '../../../util/buildClassName';
 
 export type OwnProps = {
   isOpen: boolean;
-  buttonRef: RefObject<HTMLButtonElement>;
+  buttonRef: RefObject<HTMLDivElement>;
   onEmojiStatusSelect: (emojiStatus: ApiSticker) => void;
   onClose: () => void;
   handleContextMenuHide: () => void;
@@ -54,15 +54,7 @@ const FolderPickerMenu: FC<OwnProps & StateProps> = ({
   const LIMITED_PICKER_SHIFT_DELTA = { x: -21, y: -10 };
   const REACTION_SELECTOR_WIDTH = 16.375 * REM;
   const [isContextMenuShown, markContextMenuShown, unmarkContextMenuShown] = useFlag();
-  const contextRootElementSelector="#LeftColumn"
-//   const getTriggerElement = useLastCallback(() => buttonRef.current);
-//   const getRootElement = useLastCallback(
-//     () => (contextRootElementSelector ? buttonRef.current!.closest(contextRootElementSelector) : document.body),
-//   );
-//   const getMenuElement = useLastCallback(
-//     () => document.querySelector('#portals')!.querySelector('.Tab-context-menu .bubble'),
-//   );
-//   const getLayout = useLastCallback(() => ({ withPortal: true }));
+
  const shouldUseFullPicker = true;
   useEffect(() => {
     if (isOpen && !areFeaturedStickersLoaded) {
@@ -82,10 +74,6 @@ const FolderPickerMenu: FC<OwnProps & StateProps> = ({
     if (!storedPosition) {
       return undefined;
     }
-
-    // if (renderedStoryId) {
-    //   return storedPosition;
-    // }
 
     return {
       x: storedPosition.x + (shouldUseFullPicker ? FULL_PICKER_SHIFT_DELTA.x : LIMITED_PICKER_SHIFT_DELTA.x),
@@ -135,45 +123,9 @@ const FolderPickerMenu: FC<OwnProps & StateProps> = ({
           onContextMenuClose={unmarkContextMenuShown}
           onCustomEmojiSelect={handleEmojiSelect}
           onContextMenuClick={onClose}
+          isFolderPicker
         />
-        {/* <SymbolMenuAsync
-          idPrefix="status-emoji-set-"
-          isOpen={isOpen}
-          onClose={onClose}
 
-          // isHidden={!isOpen}
-          // це фіксить переключатель але треба інший спосіб знайти бо це додає деякі непотрібні смайлики дефолтні
-          // withDefaultTopicIcons={true}
-          // isReactionPicker
-          // isTranslucent={isTranslucent}
-          // onContextMenuOpen={markContextMenuShown}
-          // onContextMenuClose={unmarkContextMenuShown}
-          onCustomEmojiSelect={handleEmojiSelect}
-          onEmojiSelect={handleEmojiSelect}
-          chatId={'#6015926231'}
-          onLoad={() => console.log("LOaded")}
-          anchor={contextMenuAnchor}
-          getTriggerElement={getTriggerElement}
-          getRootElement={getRootElement}
-          getMenuElement={getMenuElement}
-          getLayout={getLayout}
-          // onContextMenuClick={onClose}
-        /> */}
-        {/* <EmojiPicker
-             idPrefix="status-emoji-set-"
-          loadAndPlay={isOpen}
-          isHidden={!isOpen}
-          // це фіксить переключатель але треба інший спосіб знайти бо це додає деякі непотрібні смайлики дефолтні
-          withDefaultTopicIcons={true}
-          // isStatusPicker
-          isTranslucent={isTranslucent}
-          onContextMenuOpen={markContextMenuShown}
-          onContextMenuClose={unmarkContextMenuShown}
-          onCustomEmojiSelect={handleEmojiSelect}
-          onContextMenuClick={onClose}
-
-          onEmojiSelect={handleEmojiSelect}
-        /> */}
       </Menu>
     </Portal>
   );

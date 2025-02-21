@@ -1,3 +1,4 @@
+
 .StickerButton {
   --custom-emoji-size: 2.25rem;
   --premium-gradient: linear-gradient(88.39deg, #6C93FF -2.56%, #976FFF 51.27%, #DF69D1 107.39%);
@@ -11,6 +12,7 @@
   transition: background-color 0.15s ease, opacity 0.3s ease !important;
   position: relative;
   flex-shrink: 0;
+
 
   &.custom-emoji {
     color: var(--color-primary);
@@ -26,7 +28,7 @@
       color: var(--color-text);
     }
   }
-
+  
   &.effect-emoji .sticker-locked {
     font-size: 0.75rem;
     width: 0.875rem;
@@ -142,7 +144,14 @@
     transition: opacity 0.15s ease;
   }
 }
+.folder-icon {
+  font-size: var(--custom-emoji-size) !important;
+  color: var(--color-text-secondary);
+  i {
+    font-size:  var(--custom-emoji-size)  !important;
+  }
 
+}
 .sticker-context-menu {
   position: absolute;
   cursor: var(--custom-cursor, default);

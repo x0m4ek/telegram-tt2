@@ -157,11 +157,6 @@ const SettingsFoldersEdit: FC<OwnProps & StateProps> = ({
     onBack,
   });
 
-  const handleChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
-    const { currentTarget } = event;
-    dispatch({ type: 'setTitle', payload: currentTarget.value });
-  }, [dispatch]);
-
   const handleSubmit = useCallback(() => {
     dispatch({ type: 'setIsLoading', payload: true });
 
@@ -293,17 +288,19 @@ const SettingsFoldersEdit: FC<OwnProps & StateProps> = ({
     );
   }
   const handleEmojiClick = useCallback((sticker:ApiSticker) => {
-    dispatch({
-      type: 'setIsTouched',
-      payload: true,
-    });
-    dispatch({
-      type: 'setChatIcon',
-      payload: {id:sticker.id, emoji:sticker.emoji},
-    });
- 
+    // @ts-ignore
+    const isFolderIcon = sticker.stickerSetInfo?.shortName === 'folder_emojis' && Boolean(sticker.emoji);
     
-  }, [onReset,onSaveFolder,dispatch]);
+    dispatch({
+      type: 'setFolderIcon',
+      payload: {
+        id: sticker.id,
+        newEmoji: sticker.emoji,
+        isFolderIcon:isFolderIcon,
+      },
+    });
+    
+  }, [dispatch]);
   const [position ,setPosition] = useState<IAnchorPosition | undefined>(undefined);
   const handleOpenPicker = useLastCallback((e: React.MouseEvent) => {
     const bound = iconRef.current?.getBoundingClientRect() || { x: 0, y: 0 };
@@ -381,7 +378,7 @@ function removeLastEmojiIfAny(str: string): string {
                 handleContextMenuHide={handleContextMenuHide}
                 contextMenuAnchor={contextMenuAnchor}
                 position={position}
-                isTranslucent={false}
+                
               />
            
           <InputText

@@ -22,6 +22,7 @@ import './Folder.scss';
 import { ApiMessageEntityCustomEmoji } from '../../api/types';
 import CustomEmoji from '../common/CustomEmoji';
 import { IconName } from '../../types/icons';
+import { emojiToIconMap } from '../../util/FolderEmojis';
 type OwnProps = {
   className?: string;
   title: TeactNode;
@@ -42,14 +43,7 @@ const classNames = {
   active: 'Tab--active',
   badgeActive: 'Tab__badge--active',
 };
-export const emojiToIconMap: Record<string, IconName> = {
-  '💬': 'folder-chat',
-  '💼': 'folder-icon',
-  '👤': 'folder-user',
-  '⭐': 'folder-star',
-  '🤖':'folder-bot'
-  
-};
+
 const Folder: FC<OwnProps> = ({
   className,
   title,

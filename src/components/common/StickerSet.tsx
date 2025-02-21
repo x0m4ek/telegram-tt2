@@ -15,6 +15,7 @@ import {
   EFFECT_STICKERS_SET_ID,
   EMOJI_SIZE_PICKER,
   FAVORITE_SYMBOL_SET_ID,
+  FOLDER_SYMBOL_SET_ID,
   POPULAR_SYMBOL_SET_ID,
   RECENT_SYMBOL_SET_ID,
   STICKER_SIZE_PICKER,
@@ -39,6 +40,7 @@ import ReactionEmoji from './reactions/ReactionEmoji';
 import StickerButton from './StickerButton';
 
 import grey from '../../assets/icons/forumTopic/grey.svg';
+import { emojiToIconMap } from '../../util/FolderEmojis';
 
 type OwnProps = {
   stickerSet: StickerSetOrReactionsSetOrRecent;
@@ -369,7 +371,7 @@ const StickerSet: FC<OwnProps> = ({
               : sharedCanvasRef;
             const reactionId = sticker.isCustomEmoji ? sticker.id : sticker.emoji;
             const isSelected = reactionId ? selectedReactionIds?.includes(reactionId) : undefined;
-
+           
             return (
               <StickerButton
                 key={sticker.id}

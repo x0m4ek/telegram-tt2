@@ -48,6 +48,8 @@ import Icon from './icons/Icon';
 import StickerButton from './StickerButton';
 import StickerSet from './StickerSet';
 
+import { FOLDER_SYMBOL_SET_ID } from '../../config';
+import { createFolderEmojiSet } from '../../util/FolderEmojis';
 import pickerStyles from '../middle/composer/StickerPicker.module.scss';
 import styles from './CustomEmojiPicker.module.scss';
 
@@ -69,6 +71,7 @@ type OwnProps = {
   onContextMenuOpen?: NoneToVoidFunction;
   onContextMenuClose?: NoneToVoidFunction;
   onContextMenuClick?: NoneToVoidFunction;
+  isFolderPicker?: boolean;
 };
 
 type StateProps = {
@@ -138,6 +141,7 @@ const CustomEmojiPicker: FC<OwnProps & StateProps> = ({
   onContextMenuOpen,
   onContextMenuClose,
   onContextMenuClick,
+  isFolderPicker,
 }) => {
   // eslint-disable-next-line no-null/no-null
   const containerRef = useRef<HTMLDivElement>(null);
@@ -178,7 +182,9 @@ const CustomEmojiPicker: FC<OwnProps & StateProps> = ({
 
   const allSets = useMemo(() => {
     const defaultSets: StickerSetOrReactionsSetOrRecent[] = [];
-
+    if (isFolderPicker) {
+      defaultSets.push(createFolderEmojiSet());
+    }
     if (isReactionPicker && isSavedMessages) {
       if (defaultTagReactions?.length) {
         defaultSets.push({
@@ -281,7 +287,7 @@ const CustomEmojiPicker: FC<OwnProps & StateProps> = ({
     addedCustomEmojiIds, isReactionPicker, isStatusPicker, withDefaultTopicIcons, recentCustomEmojis,
     customEmojiFeaturedIds, stickerSetsById, topReactions, availableReactions, lang, recentReactions,
     defaultStatusIconsId, defaultTopicIconsId, isSavedMessages, defaultTagReactions, chatEmojiSetId,
-    isWithPaidReaction,
+    isWithPaidReaction,isFolderPicker
   ]);
 
   const noPopulatedSets = useMemo(() => (
@@ -324,9 +330,25 @@ const CustomEmojiPicker: FC<OwnProps & StateProps> = ({
     const withSharedCanvas = index < STICKER_PICKER_MAX_SHARED_COVERS;
     const isHq = selectIsAlwaysHighPriorityEmoji(getGlobal(), stickerSet as ApiStickerSet);
 
+
     if (stickerSet.id === TOP_SYMBOL_SET_ID) {
       return undefined;
     }
+    if (stickerSet.id === FOLDER_SYMBOL_SET_ID) {
+      return (
+        <Button
+          key={stickerSet.id}
+          className={buttonClassName}
+          ariaLabel={stickerSet.title}
+          round
+          color="translucent"
+          onClick={() => selectStickerSet(index)}
+        >
+          <Icon name="folder" />
+        </Button>
+      );
+    }
+
 
     if (STICKER_SET_IDS_WITH_COVER.has(stickerSet.id) || stickerSet.hasThumbnail || !firstSticker) {
       const isRecent = stickerSet.id === RECENT_SYMBOL_SET_ID || stickerSet.id === POPULAR_SYMBOL_SET_ID;

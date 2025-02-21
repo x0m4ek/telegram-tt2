@@ -25,6 +25,7 @@ import Icon from './icons/Icon';
 import StickerView from './StickerView';
 
 import './StickerButton.scss';
+import { emojiToIconMap } from '../../util/FolderEmojis';
 
 type OwnProps<T> = {
   sticker: ApiSticker;
@@ -204,13 +205,20 @@ const StickerButton = <T extends number | ApiSticker | ApiBotInlineMediaResult |
   });
 
   const shouldShowCloseButton = !IS_TOUCH_ENV && onRemoveRecentClick;
-
+  const isFolderEmoji = Boolean(
+    sticker.isCustomEmoji && 
+    sticker.emoji && 
+    // @ts-ignore
+    sticker.stickerSetInfo?.shortName === 'folder_emojis' && 
+    emojiToIconMap[sticker.emoji]
+  );
   const fullClassName = buildClassName(
     'StickerButton',
     onClick && 'interactive',
     isSelected && 'selected',
     isCustomEmoji && 'custom-emoji',
     isEffectEmoji && 'effect-emoji',
+    isFolderEmoji && 'folder-emoji',
     className,
   );
 
@@ -289,7 +297,15 @@ const StickerButton = <T extends number | ApiSticker | ApiBotInlineMediaResult |
       onClick={handleClick}
       onContextMenu={handleContextMenu}
     >
-      {isIntesectingForShowing && (
+     {isFolderEmoji && sticker.emoji ? (
+ 
+          <Icon 
+            name={emojiToIconMap[sticker.emoji]} 
+            className="folder-icon"
+          />
+      
+
+      ) : isIntesectingForShowing && (
         <StickerView
           containerRef={ref}
           sticker={sticker}
