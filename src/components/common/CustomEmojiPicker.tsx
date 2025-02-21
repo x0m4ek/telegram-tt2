@@ -165,6 +165,7 @@ const CustomEmojiPicker: FC<OwnProps & StateProps> = ({
   } = useScrolledState();
 
   const recentCustomEmojis = useMemo(() => {
+    if (isFolderPicker) return [];
     return isStatusPicker
       ? recentStatusEmojis
       : Object.values(pickTruthy(customEmojisById!, recentCustomEmojiIds!));

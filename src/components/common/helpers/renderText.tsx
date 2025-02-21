@@ -281,39 +281,37 @@ function renderTextToken(token: TextToken, params: any, filter: TextFilter): Tea
 }
 
 function removeIconEmoji(textParts: TextPart[], params: any): TextPart[] {
-  // Якщо не ввімкнено, пропускаємо
+
   if (!params?.removeIconEmoji) {
     return textParts;
   }
-  // Якщо offset не 100, теж нічого не робимо
+
   if (params.removeIconOffset !== 100) {
     return textParts;
   }
 
-  // Якщо взагалі немає текстових частин
+
   if (!textParts.length) {
     return textParts;
   }
 
   const firstPart = textParts[0];
-  // Якщо перша частина не є рядком - нічого не вирізаємо
+  
   if (typeof firstPart !== 'string') {
     return textParts;
   }
 
-  // Шукаємо емодзі на початку
+
   EMOJI_REGEX.lastIndex = 0;
   const match = EMOJI_REGEX.exec(firstPart);
-  // Якщо знайдено емодзі (match) і воно починається з індексу 0
+  
   if (match && match.index === 0) {
-    // Вирізаємо з першого рядка це емодзі
+   
     const newFirstPart = firstPart.slice(match[0].length);
 
-    // Повертаємо оновлену першу частину + решту
     return [newFirstPart, ...textParts.slice(1)];
   }
 
-  // Інакше повертаємо без змін
   return textParts;
 }
 export default function renderText(
