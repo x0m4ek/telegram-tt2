@@ -505,13 +505,13 @@ function processMarkdownInput(html: string, element: HTMLElement): string {
     // Underline
     .replace(/__([^_]+)__/g, '<u>$1</u>')
     // Strikethrough
-    .replace(/~~([^~]+)~~/g, '<s>$1</s>')
+    .replace(/~~([^~]+)~~/g, '<del>$1</del>')
     // Code
-    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/`([^`]+)`/g, '<code class="text-entity-code">$1</code>')
     // Spoiler
     .replace(/\|\|([^|]+)\|\|/g, '<span class="spoiler">$1</span>')
     // Links - Added new regex for markdown links
-    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>')
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" class="text-entity-link" dir="auto"">$1</a>')
     // Blockquote
     .replace(/^>(.*$)/gm, '<blockquote>$1</blockquote>');
 
