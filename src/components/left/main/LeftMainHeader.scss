@@ -7,7 +7,16 @@
     width: 2.5rem;
     height: 2.5rem;
   }
+  .DropdownMenu {
+    min-width: 100px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 
+    .Menu .menu-container  {
+      margin-left: 0.8125rem !important;
+    }
+  }
   .DropdownMenu.rtl {
     transition: var(--slide-transition) transform;
     position: absolute;
@@ -85,7 +94,7 @@
   .MenuItem .Toggle {
     margin-inline-start: auto;
   }
-
+  
   .MenuItem.compact .Toggle {
     transform: scale(0.75);
     margin-inline-end: -0.125rem;
